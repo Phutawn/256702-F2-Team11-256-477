@@ -21,7 +21,7 @@ public class GamePanel extends JPanel {
     private long lastAmmoDropTime = System.currentTimeMillis();  
     private boolean gameOver = false;
 
-    public GamePanel() {
+    public GamePanel(JFrame frame) {
         setBackground(Color.GRAY);
         setFocusable(true);
 
@@ -68,15 +68,20 @@ public class GamePanel extends JPanel {
 
             @Override
             public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_W || e.getKeyCode() == KeyEvent.VK_S) {
+                    playerDirectionY = 0;
+                }
+                if (e.getKeyCode() == KeyEvent.VK_A || e.getKeyCode() == KeyEvent.VK_D) {
+                    playerDirectionX = 0;
+                }
                 if (e.getKeyCode() == KeyEvent.VK_SPACE) {
-                    shooting = false;  
+                    shooting = false;
                 }
             }
         });
 
         Timer timer = new Timer(2, e -> updateGame());
         timer.start();
-    }
 
     public void resetGame() {
         playerX = 100;
@@ -92,7 +97,7 @@ public class GamePanel extends JPanel {
 
     private void shootBullet() {
         if (ammo > 0) {
-            bullets.add(new Bullet(playerX + 25, playerY + 25, playerDirection));
+            bullets.add(new Bullet(playerX + 25, playerY + 25, lastDirectionX, lastDirectionY));
             ammo--;
             repaint();
         }
@@ -127,21 +132,16 @@ public class GamePanel extends JPanel {
             }
         }
 
-        Iterator<AmmoDrop> ammoIterator = ammoDrops.iterator();
-        while (ammoIterator.hasNext()) {
-            AmmoDrop ammoDrop = ammoIterator.next();
-            if (ammoDrop.isPickedUp(playerX, playerY)) {
-                ammo += 5; 
-                ammoIterator.remove(); 
-            }
+        if (playerDirectionX != 0 || playerDirectionY != 0) {
+            lastDirectionX = playerDirectionX;
+            lastDirectionY = playerDirectionY;
         }
+    }
 
-        long currentTime = System.currentTimeMillis();
-        if (currentTime - lastAmmoDropTime >= 15000) {  
-            generateAmmoDrop();
-            lastAmmoDropTime = currentTime; 
-        }
-
+    private void dropAmmo() {
+        int x = random.nextInt(getWidth() - 20);
+        int y = random.nextInt(getHeight() - 20);
+        ammoDrops.add(new AmmoDrop(x, y));
         repaint();
     }
 
@@ -162,8 +162,8 @@ public class GamePanel extends JPanel {
     }
 
     @Override
-    protected void paintComponent(Graphics g) {
-        super.paintComponent(g);
+protected void paintComponent(Graphics g) {
+    super.paintComponent(g);
 
         if (gameOver) {
             g.setColor(Color.BLACK);
@@ -177,10 +177,8 @@ public class GamePanel extends JPanel {
         g.setColor(Color.BLUE);
         g.fillRect(playerX, playerY, 50, 50);
 
-        g.setColor(Color.YELLOW);
-        for (Bullet bullet : bullets) {
-            g.fillOval(bullet.getX(), bullet.getY(), 10, 10);
-        }
+    g.setColor(isBlack ? Color.BLACK : Color.WHITE);
+    g.fillRect(playerX, playerY, 50, 50);
 
         g.setColor(Color.GREEN);
         for (Enemy enemy : enemies) {
