@@ -1,33 +1,20 @@
 package Project;
 
-import java.awt.event.KeyEvent;
-
 public class Bullet {
     private int x, y;
     private final int speed = 10;
-    private int direction;
+    private int directionX, directionY;
 
-    public Bullet(int x, int y, int direction) {
+    public Bullet(int x, int y, int directionX, int directionY) {
         this.x = x;
         this.y = y;
-        this.direction = direction;
+        this.directionX = directionX;
+        this.directionY = directionY;
     }
 
     public void move() {
-        switch (direction) {
-            case KeyEvent.VK_W:
-                y -= speed;
-                break;
-            case KeyEvent.VK_S:
-                y += speed;
-                break;
-            case KeyEvent.VK_A:
-                x -= speed;
-                break;
-            case KeyEvent.VK_D:
-                x += speed;
-                break;
-        }
+        x += directionX * speed;
+        y += directionY * speed;
     }
 
     public boolean isOutOfBounds(int width, int height) {
