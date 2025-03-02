@@ -1,7 +1,6 @@
 package Project;
 
 import java.awt.*;
-import java.util.Random;
 
 public class AmmoDrop {
     private int x, y;
