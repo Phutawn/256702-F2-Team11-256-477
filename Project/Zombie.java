@@ -1,13 +1,17 @@
 package Project;
 
 import java.awt.*;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class Zombie {
     private int x, y;
     private final int speed = 2;
     private int direction;
     private boolean isAlive = true;
-    private boolean isGreen = true;  
+    private boolean isGreen = true;
+    private Timer attackTimer;
+    private boolean canAttack = true;
 
     public Zombie(int mapWidth, int mapHeight) {
         int edge = (int) (Math.random() * 4);
@@ -29,6 +33,8 @@ public class Zombie {
                 y = (int) (Math.random() * mapHeight);
                 break;
         }
+
+        attackTimer = new Timer();
     }
 
     public void move(int playerX, int playerY) {
@@ -68,5 +74,24 @@ public class Zombie {
 
     public boolean isAlive() {
         return isAlive;
+    }
+
+    public void checkCollisionWithPlayer(int playerX, int playerY, GamePanel gamePanel) {
+        if (new Rectangle(x, y, 40, 40).intersects(new Rectangle(playerX, playerY, 50, 50))) {
+            if (canAttack) {
+                gamePanel.decreaseHealth(10); 
+                startAttackCooldown();  
+            }
+        }
+    }
+
+    private void startAttackCooldown() {
+        canAttack = false;
+        attackTimer.schedule(new TimerTask() {
+            @Override
+            public void run() {
+                canAttack = true; 
+            }
+        }, 2000); 
     }
 }

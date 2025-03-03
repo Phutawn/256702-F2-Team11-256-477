@@ -1,11 +1,11 @@
 package Project;
 
-import javax.swing.*;
 import java.awt.*;
-import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Random;
+import javax.swing.*;
+import java.awt.event.*;
 
 public class GamePanel extends JPanel {
     private int playerX = 100;
@@ -23,6 +23,8 @@ public class GamePanel extends JPanel {
     private boolean isBlack = true;
     private int currentMap = 0;
     private Random random = new Random();
+    private int health = 100; 
+    private boolean isGameOver = false;
 
     public GamePanel(JFrame frame) {
         setBackground(Color.GRAY);
@@ -30,32 +32,34 @@ public class GamePanel extends JPanel {
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                switch (e.getKeyCode()) {
-                    case KeyEvent.VK_W:
-                        playerDirectionY = -1;
-                        break;
-                    case KeyEvent.VK_S:
-                        playerDirectionY = 1;
-                        break;
-                    case KeyEvent.VK_A:
-                        playerDirectionX = -1;
-                        break;
-                    case KeyEvent.VK_D:
-                        playerDirectionX = 1;
-                        break;
-                    case KeyEvent.VK_SPACE:
-                        if (!shooting) {
-                            shootBullet();
-                            shooting = true;
-                        }
-                        break;
-                    case KeyEvent.VK_ESCAPE:
-                        goToMainMenu(frame);
-                        break;
+                if (!isGameOver) {
+                    switch (e.getKeyCode()) {
+                        case KeyEvent.VK_W:
+                            playerDirectionY = -1;
+                            break;
+                        case KeyEvent.VK_S:
+                            playerDirectionY = 1;
+                            break;
+                        case KeyEvent.VK_A:
+                            playerDirectionX = -1;
+                            break;
+                        case KeyEvent.VK_D:
+                            playerDirectionX = 1;
+                            break;
+                        case KeyEvent.VK_SPACE:
+                            if (!shooting) {
+                                shootBullet();
+                                shooting = true;
+                            }
+                            break;
+                        case KeyEvent.VK_ESCAPE:
+                            goToMainMenu(frame);
+                            break;
+                    }
+                    movePlayer();
+                    checkMapTransition();
+                    repaint();
                 }
-                movePlayer();
-                checkMapTransition();
-                repaint();
             }
 
             @Override
@@ -145,6 +149,7 @@ public class GamePanel extends JPanel {
             Zombie zombie = zombieIterator.next();
             if (zombie.isAlive()) {
                 zombie.move(playerX, playerY);
+                zombie.checkCollisionWithPlayer(playerX, playerY, this);  
             }
         }
 
@@ -192,40 +197,83 @@ public class GamePanel extends JPanel {
     }
 
     private void clearBullets() {
-        bullets.clear();  // ลบกระสุนทั้งหมด
+        bullets.clear();
     }
 
     private void goToMainMenu(JFrame frame) {
         ZombieSurvivalMenuTH.showMenu(frame);
     }
 
+    public void decreaseHealth(int amount) {
+        health -= amount;
+        if (health <= 0) {
+            health = 0;
+            isGameOver = true; 
+            repaint();
+        }
+    }
+
+    private void showGameOverScreen(Graphics g) {
+        g.setColor(new Color(0, 0, 0, 150));  
+        g.fillRect(0, 0, getWidth(), getHeight());
+
+        g.setColor(Color.WHITE);
+        Font gameOverFont = new Font("Tahoma", Font.BOLD, 50);
+        g.setFont(gameOverFont);
+        g.drawString("คุณตายแล้ว", getWidth() / 2 - 150, getHeight() / 2 - 50);
+
+        Font creditFont = new Font("Tahoma", Font.PLAIN, 30);
+        g.setFont(creditFont);
+        g.drawString("เครดิต: นายภูตะวัน กุลชาติชัย", getWidth() / 2 - 180, getHeight() / 2);
+        g.drawString("รหัสนักศึกษา: 6730300477", getWidth() / 2 - 140, getHeight() / 2 + 40);
+
+        JButton backButton = new JButton("กลับสู่เมนูหลัก");
+        backButton.setBounds(getWidth() / 2 - 75, getHeight() / 2 + 80, 150, 40);
+        
+        backButton.setFont(new Font("Tahoma", Font.PLAIN, 16));
+
+        backButton.addActionListener(e -> goToMainMenu((JFrame) SwingUtilities.getWindowAncestor(this)));
+        this.add(backButton);
+    }
+
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
 
-        Font font = new Font("Tahoma", Font.PLAIN, 16);
-        g.setFont(font);
+        if (isGameOver) {
+            showGameOverScreen(g);
+        } else {
+            
+            g.setColor(Color.RED);
+            g.fillRect(10, 10, 150, 15);  
 
-        g.setColor(isBlack ? Color.BLACK : Color.WHITE);
-        g.fillRect(playerX, playerY, 50, 50);
+            int currentHealthWidth = Math.min(health * 2, 150);  
+            g.setColor(Color.GREEN);
+            g.fillRect(10, 10, currentHealthWidth, 15);  
 
-        g.setColor(Color.YELLOW);
-        for (Bullet bullet : bullets) {
-            g.fillOval(bullet.getX(), bullet.getY(), 10, 10);
+            g.setColor(isBlack ? Color.BLACK : Color.WHITE);
+            g.fillRect(playerX, playerY, 50, 50);
+
+            g.setColor(Color.YELLOW);
+            for (Bullet bullet : bullets) {
+                g.fillOval(bullet.getX(), bullet.getY(), 10, 10);
+            }
+
+            for (AmmoDrop ammoDrop : ammoDrops) {
+                ammoDrop.draw(g);
+            }
+
+            for (Zombie zombie : zombies) {
+                zombie.draw(g);
+            }
+
+            g.setColor(Color.WHITE);
+            g.drawString("Ammo: " + ammo, 10, 40);
+            g.drawString("Map: " + currentMap, 10, 60);
+
+            Font thaiFont = new Font("Tahoma", Font.PLAIN, 14); 
+            g.setFont(thaiFont);
+            g.drawString("กด ESC เพื่อกลับสู่เมนูหลัก", 10, getHeight() - 10);
         }
-
-        for (AmmoDrop ammoDrop : ammoDrops) {
-            ammoDrop.draw(g);
-        }
-
-        for (Zombie zombie : zombies) {
-            zombie.draw(g);
-        }
-
-        g.setColor(Color.WHITE);
-        g.drawString("Ammo: " + ammo, 10, 20);
-        g.drawString("Map: " + currentMap, 10, 40);
-        
-        g.drawString("กด ESC เพื่อกลับสู่หน้าหลัก", 10, getHeight() - 10);
     }
 }
