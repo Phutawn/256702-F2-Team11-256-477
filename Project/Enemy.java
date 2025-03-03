@@ -1,23 +1,25 @@
 package Project;
 
-public class Enemy {
-    int x, y;
-    int dx, dy;
+import java.awt.*;
 
-    public Enemy(int x, int y, int targetX, int targetY) {
+public class Enemy {
+    public int x, y;
+    private final int speed = 2;
+
+    public Enemy(int x, int y) {
         this.x = x;
         this.y = y;
-        double angle = Math.atan2(targetY - y, targetX - x);
-        this.dx = (int) (Math.cos(angle) * 2);
-        this.dy = (int) (Math.sin(angle) * 2);
     }
 
-    public void update() {
-        x += dx;
-        y += dy;
+    public void update(int playerX, int playerY) {
+        if (x < playerX) x += speed;
+        if (x > playerX) x -= speed;
+        if (y < playerY) y += speed;
+        if (y > playerY) y -= speed;
     }
 
-    public boolean checkCollisionWithPlayer(int playerX, int playerY, int playerSize) {
-        return x < playerX + playerSize && x + 20 > playerX && y < playerY + playerSize && y + 20 > playerY;
+    public void draw(Graphics g) {
+        g.setColor(Color.GREEN);
+        g.fillRect(x, y, 20, 20);
     }
 }

@@ -5,65 +5,57 @@ import java.awt.*;
 import java.awt.event.*;
 import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Random;
 
 public class GamePanel extends JPanel {
-    private int playerX = 100, playerY = 100;
+    private int playerX = 100;
+    private int playerY = 100;
     private final int playerSpeed = 5;
-    private int playerDirection = KeyEvent.VK_D;
-    private int ammo = 100;
+    private int playerDirectionX = 0;
+    private int playerDirectionY = 0;
+    private int lastDirectionX = 0;
+    private int lastDirectionY = -1;
+    private int ammo = 10;
     private ArrayList<Bullet> bullets = new ArrayList<>();
     private ArrayList<AmmoDrop> ammoDrops = new ArrayList<>();
-    private List<Enemy> enemies = new ArrayList<>();
-    private Random rand = new Random();
+    private ArrayList<Zombie> zombies = new ArrayList<>();
     private boolean shooting = false;
-    private long lastAmmoDropTime = System.currentTimeMillis();  
-    private boolean gameOver = false;
+    private boolean isBlack = true;
+    private int currentMap = 0;
+    private Random random = new Random();
 
     public GamePanel(JFrame frame) {
         setBackground(Color.GRAY);
         setFocusable(true);
-
         addKeyListener(new KeyAdapter() {
             @Override
             public void keyPressed(KeyEvent e) {
-                if (gameOver && e.getKeyCode() == KeyEvent.VK_R) {
-                    resetGame();
-                    return;
+                switch (e.getKeyCode()) {
+                    case KeyEvent.VK_W:
+                        playerDirectionY = -1;
+                        break;
+                    case KeyEvent.VK_S:
+                        playerDirectionY = 1;
+                        break;
+                    case KeyEvent.VK_A:
+                        playerDirectionX = -1;
+                        break;
+                    case KeyEvent.VK_D:
+                        playerDirectionX = 1;
+                        break;
+                    case KeyEvent.VK_SPACE:
+                        if (!shooting) {
+                            shootBullet();
+                            shooting = true;
+                        }
+                        break;
+                    case KeyEvent.VK_ESCAPE:
+                        goToMainMenu(frame);
+                        break;
                 }
-                
-                if (!gameOver) {
-                    switch (e.getKeyCode()) {
-                        case KeyEvent.VK_W:
-                        case KeyEvent.VK_UP:
-                            playerY -= playerSpeed;
-                            playerDirection = KeyEvent.VK_W;
-                            break;
-                        case KeyEvent.VK_S:
-                        case KeyEvent.VK_DOWN:
-                            playerY += playerSpeed;
-                            playerDirection = KeyEvent.VK_S;
-                            break;
-                        case KeyEvent.VK_A:
-                        case KeyEvent.VK_LEFT:
-                            playerX -= playerSpeed;
-                            playerDirection = KeyEvent.VK_A;
-                            break;
-                        case KeyEvent.VK_D:
-                        case KeyEvent.VK_RIGHT:
-                            playerX += playerSpeed;
-                            playerDirection = KeyEvent.VK_D;
-                            break;
-                        case KeyEvent.VK_SPACE:
-                            if (!shooting) {
-                                shootBullet();
-                                shooting = true;
-                            }
-                            break;
-                    }
-                    repaint();
-                }
+                movePlayer();
+                checkMapTransition();
+                repaint();
             }
 
             @Override
@@ -80,19 +72,22 @@ public class GamePanel extends JPanel {
             }
         });
 
-        Timer timer = new Timer(2, e -> updateGame());
+        generateNewMap();
+
+        Timer timer = new Timer(20, e -> updateGame());
         timer.start();
 
-    public void resetGame() {
-        playerX = 100;
-        playerY = 100;
-        ammo = 10;
-        bullets.clear();
-        ammoDrops.clear();
-        enemies.clear();
-        gameOver = false;
-        spawnEnemy();
-        repaint();
+        Timer colorTimer = new Timer(500, e -> {
+            isBlack = !isBlack;
+            repaint();
+        });
+        colorTimer.start();
+
+        Timer ammoDropTimer = new Timer(15000, e -> dropAmmo());
+        ammoDropTimer.start();
+
+        Timer zombieSpawnTimer = new Timer(5000, e -> spawnZombie());
+        zombieSpawnTimer.start();
     }
 
     private void shootBullet() {
@@ -103,34 +98,9 @@ public class GamePanel extends JPanel {
         }
     }
 
-    private void updateGame() {
-        if (gameOver) return;
-
-        Iterator<Bullet> iterator = bullets.iterator();
-        while (iterator.hasNext()) {
-            Bullet bullet = iterator.next();
-            bullet.move();
-            if (bullet.isOutOfBounds(getWidth(), getHeight())) {
-                iterator.remove();
-            }
-
-            for (int i = 0; i < enemies.size(); i++) {
-                Enemy enemy = enemies.get(i);
-                if (bullet.getX() < enemy.x + 20 && bullet.getX() + 10 > enemy.x && bullet.getY() < enemy.y + 20 && bullet.getY() + 10 > enemy.y) {
-                    enemies.remove(i);
-                    iterator.remove();
-                    spawnEnemy();
-                    break;
-                }
-            }
-        }
-
-        for (Enemy enemy : enemies) {
-            enemy.update();
-            if (checkCollisionWithPlayer(enemy)) {
-                gameOver = true;
-            }
-        }
+    private void movePlayer() {
+        playerX += playerDirectionX * playerSpeed;
+        playerY += playerDirectionY * playerSpeed;
 
         if (playerDirectionX != 0 || playerDirectionY != 0) {
             lastDirectionX = playerDirectionX;
@@ -145,51 +115,117 @@ public class GamePanel extends JPanel {
         repaint();
     }
 
-    private boolean checkCollisionWithPlayer(Enemy enemy) {
-        return playerX < enemy.x + 20 && playerX + 50 > enemy.x && playerY < enemy.y + 20 && playerY + 50 > enemy.y;
+    private void spawnZombie() {
+        zombies.add(new Zombie(getWidth(), getHeight()));
+        repaint();
     }
 
-    private void spawnEnemy() {
-        int spawnX = rand.nextInt(getWidth());
-        int spawnY = rand.nextInt(getHeight());
-        enemies.add(new Enemy(spawnX, spawnY, playerX, playerY));
+    private void updateGame() {
+        Iterator<Bullet> bulletIterator = bullets.iterator();
+        while (bulletIterator.hasNext()) {
+            Bullet bullet = bulletIterator.next();
+            bullet.move();
+            if (bullet.isOutOfBounds(getWidth(), getHeight())) {
+                bulletIterator.remove();
+            } else {
+                Iterator<Zombie> zombieIterator = zombies.iterator();
+                while (zombieIterator.hasNext()) {
+                    Zombie zombie = zombieIterator.next();
+                    if (zombie.isAlive() && zombie.getBounds().intersects(new Rectangle(bullet.getX(), bullet.getY(), 10, 10))) {
+                        zombie.kill();
+                        bulletIterator.remove();
+                        break;
+                    }
+                }
+            }
+        }
+
+        Iterator<Zombie> zombieIterator = zombies.iterator();
+        while (zombieIterator.hasNext()) {
+            Zombie zombie = zombieIterator.next();
+            if (zombie.isAlive()) {
+                zombie.move(playerX, playerY);
+            }
+        }
+
+        checkAmmoPickup();
+        repaint();
     }
 
-    private void generateAmmoDrop() {
-        int x = rand.nextInt(getWidth() - 20);
-        int y = rand.nextInt(getHeight() - 20);
-        ammoDrops.add(new AmmoDrop(x, y));
+    private void checkAmmoPickup() {
+        Iterator<AmmoDrop> iterator = ammoDrops.iterator();
+        while (iterator.hasNext()) {
+            AmmoDrop drop = iterator.next();
+            if (new Rectangle(playerX, playerY, 50, 50).intersects(new Rectangle(drop.getX(), drop.getY(), 20, 20))) {
+                ammo += 5;
+                iterator.remove();
+            }
+        }
+    }
+
+    private void checkMapTransition() {
+        if (playerX < 0) {
+            playerX = getWidth() - 50;
+            generateNewMap();
+            clearBullets(); 
+        } else if (playerX > getWidth()) {
+            playerX = 0;
+            generateNewMap();
+            clearBullets(); 
+        } else if (playerY < 0) {
+            playerY = getHeight() - 50;
+            generateNewMap();
+            clearBullets(); 
+        } else if (playerY > getHeight()) {
+            playerY = 0;
+            generateNewMap();
+            clearBullets();  
+        }
+    }
+
+    private void generateNewMap() {
+        currentMap = random.nextInt(5);
+        setBackground(new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256)));
+        zombies.clear();
+        ammoDrops.clear();
+        repaint();
+    }
+
+    private void clearBullets() {
+        bullets.clear();  // ลบกระสุนทั้งหมด
+    }
+
+    private void goToMainMenu(JFrame frame) {
+        ZombieSurvivalMenuTH.showMenu(frame);
     }
 
     @Override
-protected void paintComponent(Graphics g) {
-    super.paintComponent(g);
+    protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
 
-        if (gameOver) {
-            g.setColor(Color.BLACK);
-            g.setFont(new Font("Arial", Font.BOLD, 50));
-            g.drawString("GAME OVER", getWidth() / 2 - 150, getHeight() / 2);
-            g.setFont(new Font("Arial", Font.BOLD, 20));
-            g.drawString("Press R to Restart", getWidth() / 2 - 90, getHeight() / 2 + 40);
-            return;
-        }
+        Font font = new Font("Tahoma", Font.PLAIN, 16);
+        g.setFont(font);
 
-        g.setColor(Color.BLUE);
+        g.setColor(isBlack ? Color.BLACK : Color.WHITE);
         g.fillRect(playerX, playerY, 50, 50);
 
-    g.setColor(isBlack ? Color.BLACK : Color.WHITE);
-    g.fillRect(playerX, playerY, 50, 50);
-
-        g.setColor(Color.GREEN);
-        for (Enemy enemy : enemies) {
-            g.fillRect(enemy.x, enemy.y, 20, 20);
+        g.setColor(Color.YELLOW);
+        for (Bullet bullet : bullets) {
+            g.fillOval(bullet.getX(), bullet.getY(), 10, 10);
         }
 
         for (AmmoDrop ammoDrop : ammoDrops) {
             ammoDrop.draw(g);
         }
 
+        for (Zombie zombie : zombies) {
+            zombie.draw(g);
+        }
+
         g.setColor(Color.WHITE);
         g.drawString("Ammo: " + ammo, 10, 20);
+        g.drawString("Map: " + currentMap, 10, 40);
+        
+        g.drawString("กด ESC เพื่อกลับสู่หน้าหลัก", 10, getHeight() - 10);
     }
 }
