@@ -80,7 +80,7 @@ public class Zombie {
         if (new Rectangle(x, y, 40, 40).intersects(new Rectangle(playerX, playerY, 50, 50))) {
             if (canAttack) {
                 gamePanel.decreaseHealth(10); 
-                startAttackCooldown();  
+                startAttackCooldown();
             }
         }
     }
@@ -90,8 +90,8 @@ public class Zombie {
         attackTimer.schedule(new TimerTask() {
             @Override
             public void run() {
-                canAttack = true; 
+                canAttack = true;
             }
-        }, 2000); 
+        }, 1000);
     }
 }

@@ -19,11 +19,12 @@ public class GamePanel extends JPanel {
     private ArrayList<Bullet> bullets = new ArrayList<>();
     private ArrayList<AmmoDrop> ammoDrops = new ArrayList<>();
     private ArrayList<Zombie> zombies = new ArrayList<>();
+    private ArrayList<ScrapDrop> scrapDrops = new ArrayList<>(); 
     private boolean shooting = false;
     private boolean isBlack = true;
     private int currentMap = 0;
     private Random random = new Random();
-    private int health = 100; 
+    private int health = 100;
     private boolean isGameOver = false;
 
     public GamePanel(JFrame frame) {
@@ -54,6 +55,21 @@ public class GamePanel extends JPanel {
                             break;
                         case KeyEvent.VK_ESCAPE:
                             goToMainMenu(frame);
+                            break;
+                        case KeyEvent.VK_C:
+                            new CraftingMenuTH().setVisible(true);
+                            break;
+                        case KeyEvent.VK_F:
+                            if (PlayerInventory.getFirstAidKits() > 0) {
+                                int healAmount = 50;
+                                health += healAmount;
+                                if (health > 100) {
+                                    health = 100;
+                                }
+                                PlayerInventory.useFirstAidKit();
+                                JOptionPane.showMessageDialog(frame, "Used first aid kit, healed " + healAmount + " health");
+                                repaint();
+                            }
                             break;
                     }
                     movePlayer();
@@ -92,6 +108,9 @@ public class GamePanel extends JPanel {
 
         Timer zombieSpawnTimer = new Timer(5000, e -> spawnZombie());
         zombieSpawnTimer.start();
+
+        Timer scrapDropTimer = new Timer(20000, e -> dropScrap());
+        scrapDropTimer.start();
     }
 
     private void shootBullet() {
@@ -105,7 +124,6 @@ public class GamePanel extends JPanel {
     private void movePlayer() {
         playerX += playerDirectionX * playerSpeed;
         playerY += playerDirectionY * playerSpeed;
-
         if (playerDirectionX != 0 || playerDirectionY != 0) {
             lastDirectionX = playerDirectionX;
             lastDirectionY = playerDirectionY;
@@ -116,6 +134,13 @@ public class GamePanel extends JPanel {
         int x = random.nextInt(getWidth() - 20);
         int y = random.nextInt(getHeight() - 20);
         ammoDrops.add(new AmmoDrop(x, y));
+        repaint();
+    }
+
+    private void dropScrap() {
+        int x = random.nextInt(getWidth() - 20);
+        int y = random.nextInt(getHeight() - 20);
+        scrapDrops.add(new ScrapDrop(x, y));
         repaint();
     }
 
@@ -149,11 +174,12 @@ public class GamePanel extends JPanel {
             Zombie zombie = zombieIterator.next();
             if (zombie.isAlive()) {
                 zombie.move(playerX, playerY);
-                zombie.checkCollisionWithPlayer(playerX, playerY, this);  
+                zombie.checkCollisionWithPlayer(playerX, playerY, this);
             }
         }
 
         checkAmmoPickup();
+        checkScrapPickup();
         repaint();
     }
 
@@ -168,23 +194,35 @@ public class GamePanel extends JPanel {
         }
     }
 
+    private void checkScrapPickup() {
+        Iterator<ScrapDrop> iterator = scrapDrops.iterator();
+        while (iterator.hasNext()) {
+            ScrapDrop scrap = iterator.next();
+            if (new Rectangle(playerX, playerY, 50, 50).intersects(new Rectangle(scrap.getX(), scrap.getY(), scrap.getSize(), scrap.getSize()))) {
+                scrap.pickUp();
+                PlayerInventory.addScrap(1);
+                iterator.remove();
+            }
+        }
+    }
+
     private void checkMapTransition() {
         if (playerX < 0) {
             playerX = getWidth() - 50;
             generateNewMap();
-            clearBullets(); 
+            clearBullets();
         } else if (playerX > getWidth()) {
             playerX = 0;
             generateNewMap();
-            clearBullets(); 
+            clearBullets();
         } else if (playerY < 0) {
             playerY = getHeight() - 50;
             generateNewMap();
-            clearBullets(); 
+            clearBullets();
         } else if (playerY > getHeight()) {
             playerY = 0;
             generateNewMap();
-            clearBullets();  
+            clearBullets();
         }
     }
 
@@ -193,6 +231,7 @@ public class GamePanel extends JPanel {
         setBackground(new Color(random.nextInt(256), random.nextInt(256), random.nextInt(256)));
         zombies.clear();
         ammoDrops.clear();
+        scrapDrops.clear();
         repaint();
     }
 
@@ -208,30 +247,25 @@ public class GamePanel extends JPanel {
         health -= amount;
         if (health <= 0) {
             health = 0;
-            isGameOver = true; 
+            isGameOver = true;
             repaint();
         }
     }
 
     private void showGameOverScreen(Graphics g) {
-        g.setColor(new Color(0, 0, 0, 150));  
+        g.setColor(new Color(0, 0, 0, 150));
         g.fillRect(0, 0, getWidth(), getHeight());
-
         g.setColor(Color.WHITE);
         Font gameOverFont = new Font("Tahoma", Font.BOLD, 50);
         g.setFont(gameOverFont);
         g.drawString("คุณตายแล้ว", getWidth() / 2 - 150, getHeight() / 2 - 50);
-
         Font creditFont = new Font("Tahoma", Font.PLAIN, 30);
         g.setFont(creditFont);
         g.drawString("เครดิต: นายภูตะวัน กุลชาติชัย", getWidth() / 2 - 180, getHeight() / 2);
         g.drawString("รหัสนักศึกษา: 6730300477", getWidth() / 2 - 140, getHeight() / 2 + 40);
-
         JButton backButton = new JButton("กลับสู่เมนูหลัก");
         backButton.setBounds(getWidth() / 2 - 75, getHeight() / 2 + 80, 150, 40);
-        
         backButton.setFont(new Font("Tahoma", Font.PLAIN, 16));
-
         backButton.addActionListener(e -> goToMainMenu((JFrame) SwingUtilities.getWindowAncestor(this)));
         this.add(backButton);
     }
@@ -239,17 +273,14 @@ public class GamePanel extends JPanel {
     @Override
     protected void paintComponent(Graphics g) {
         super.paintComponent(g);
-
         if (isGameOver) {
             showGameOverScreen(g);
         } else {
-            
             g.setColor(Color.RED);
-            g.fillRect(10, 10, 150, 15);  
-
-            int currentHealthWidth = Math.min(health * 2, 150);  
+            g.fillRect(10, 10, 150, 15);
+            int currentHealthWidth = Math.min(health * 2, 150);
             g.setColor(Color.GREEN);
-            g.fillRect(10, 10, currentHealthWidth, 15);  
+            g.fillRect(10, 10, currentHealthWidth, 15);
 
             g.setColor(isBlack ? Color.BLACK : Color.WHITE);
             g.fillRect(playerX, playerY, 50, 50);
@@ -263,6 +294,10 @@ public class GamePanel extends JPanel {
                 ammoDrop.draw(g);
             }
 
+            for (ScrapDrop scrapDrop : scrapDrops) {
+                scrapDrop.draw(g);
+            }
+
             for (Zombie zombie : zombies) {
                 zombie.draw(g);
             }
@@ -270,10 +305,10 @@ public class GamePanel extends JPanel {
             g.setColor(Color.WHITE);
             g.drawString("Ammo: " + ammo, 10, 40);
             g.drawString("Map: " + currentMap, 10, 60);
-
-            Font thaiFont = new Font("Tahoma", Font.PLAIN, 14); 
+            Font thaiFont = new Font("Tahoma", Font.PLAIN, 14);
             g.setFont(thaiFont);
             g.drawString("กด ESC เพื่อกลับสู่เมนูหลัก", 10, getHeight() - 10);
+            g.drawString("กด C เพื่อเข้าสู่ระบบคราฟ", 10, getHeight() - 30);
         }
     }
 }
