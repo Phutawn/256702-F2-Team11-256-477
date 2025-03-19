@@ -24,6 +24,7 @@ public class ZombieShooterGame extends GameApplication {
     private double lastDirX = 0;
     private double lastDirY = -1;
     private Random random = new Random();
+    private boolean canShoot = true; // ตรวจสอบการยิงเพื่อให้มี delay
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -31,6 +32,7 @@ public class ZombieShooterGame extends GameApplication {
         settings.setHeight(600);
         settings.setTitle("Zombie Shooter Game");
         settings.setVersion("1.0");
+        // ไม่เรียกใช้ setMainLoopFPS เนื่องจาก FXGL จัดการ FPS โดยอัตโนมัติ
     }
 
     @Override
@@ -52,72 +54,81 @@ public class ZombieShooterGame extends GameApplication {
 
         spawnZombie();
         initInput();
-        shootBullet();
 
-        // สั่งให้เกิดซอมบี้ใหม่ทุกๆ 10 วินาที
+        // ซอมบี้ใหม่เกิดนอกจอทุกๆ 10 วินาที
         run(() -> spawnZombieOutsideScreen(), Duration.seconds(ZOMBIE_SPAWN_INTERVAL));
     }
 
     @Override
     protected void initInput() {
-        if (inputInitialized) return;
+        if (inputInitialized)
+            return;
         inputInitialized = true;
 
-        FXGL.onKey(KeyCode.A, "Move Left", () -> {
+        onKey(KeyCode.A, "Move Left", () -> {
             lastDirX = -1;
             lastDirY = 0;
-            getPlayer().translateX(-SPEED);
+            player.translateX(-SPEED);
         });
-        FXGL.onKey(KeyCode.D, "Move Right", () -> {
+        onKey(KeyCode.D, "Move Right", () -> {
             lastDirX = 1;
             lastDirY = 0;
-            getPlayer().translateX(SPEED);
+            player.translateX(SPEED);
         });
-        FXGL.onKey(KeyCode.W, "Move Up", () -> {
+        onKey(KeyCode.W, "Move Up", () -> {
             lastDirX = 0;
             lastDirY = -1;
-            getPlayer().translateY(-SPEED);
+            player.translateY(-SPEED);
         });
-        FXGL.onKey(KeyCode.S, "Move Down", () -> {
+        onKey(KeyCode.S, "Move Down", () -> {
             lastDirX = 0;
             lastDirY = 1;
-            getPlayer().translateY(SPEED);
+            player.translateY(SPEED);
         });
 
-        FXGL.onKey(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
+        // ยิงกระสุนด้วยปุ่ม SPACE
+        onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
     }
 
-    private Entity getPlayer() {
-        return player;
+    /*@Override
+    protected void initUI() {
+        super.initUI();
+        
+        // โหลดไฟล์ CSS
+        getGameScene().getRoot().getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+    }*/
+
+
+    private void shootBullet() {
+        if (!canShoot)
+            return;
+        canShoot = false;
+        // เก็บทิศทางสุดท้ายที่ผู้เล่นเคลื่อนที่ไว้
+        final double bulletDirX = lastDirX;
+        final double bulletDirY = lastDirY;
+
+        // เริ่มยิงที่ตำแหน่งกึ่งกลางของผู้เล่น
+        double startX = player.getX() + player.getWidth() / 2;
+        double startY = player.getY() + player.getHeight() / 2;
+
+        Entity bullet = entityBuilder()
+                .at(startX, startY)
+                .view(new Rectangle(10, 5, Color.YELLOW))
+                .buildAndAttach();
+
+        // เคลื่อนที่กระสุนแบบเส้นตรงที่อัตรา 30 FPS
+        run(() -> {
+            bullet.translate(bulletDirX * BULLET_SPEED, bulletDirY * BULLET_SPEED);
+            // เมื่อกระสุนออกนอกขอบจอ ให้ลบออกจากโลกเกม
+            if (bullet.getX() < 0 || bullet.getX() > getSettings().getWidth() ||
+                bullet.getY() < 0 || bullet.getY() > getSettings().getHeight()) {
+                bullet.removeFromWorld();
+            }
+        }, Duration.seconds(1.0 / 30));
+
+        // ตั้งเวลา delay 1 วินาที เพื่อให้ยิงกระสุนครั้งถัดไปได้
+        getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
     }
-
-    private boolean canShoot = true; // เพิ่มตัวแปรเพื่อตรวจสอบว่าผู้เล่นสามารถยิงได้หรือไม่
-
-private void shootBullet() {
-    if (!canShoot) return; // ถ้ายังไม่ครบ 2 วินาที ให้ป้องกันการยิง
-
-    canShoot = false; // ตั้งค่าเป็น false เพื่อป้องกันการยิงซ้ำ
-    double bulletDirX = lastDirX;
-    double bulletDirY = lastDirY;
-
-    Entity bullet = entityBuilder()
-            .at(player.getX() + player.getWidth() / 2, player.getY())
-            .view(new Rectangle(10, 5, Color.YELLOW))
-            .buildAndAttach();
-
-    run(() -> {
-        bullet.translateX(bulletDirX * BULLET_SPEED);
-        bullet.translateY(bulletDirY * BULLET_SPEED);
-        if (bullet.getX() < 0 || bullet.getX() > getSettings().getWidth() ||
-            bullet.getY() < 0 || bullet.getY() > getSettings().getHeight()) {
-            bullet.removeFromWorld();
-        }
-    }, Duration.seconds(0.05));
-
-    // ตั้งค่าให้ยิงได้อีกครั้งหลังจาก 2 วินาที
-    FXGL.getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
-
-}
 
     private void spawnZombie() {
         Entity zombie = entityBuilder()
@@ -162,18 +173,18 @@ private void shootBullet() {
     }
 
     private void trackZombieMovement(Entity zombie) {
+        // อัปเดตการเคลื่อนที่ของซอมบี้ที่อัตรา 30 FPS
         run(() -> {
             if (player != null) {
-                double dx = player.getX() - zombie.getX();
-                double dy = player.getY() - zombie.getY();
+                double dx = (player.getX() + player.getWidth() / 2) - (zombie.getX() + zombie.getWidth() / 2);
+                double dy = (player.getY() + player.getHeight() / 2) - (zombie.getY() + zombie.getHeight() / 2);
                 double distance = Math.sqrt(dx * dx + dy * dy);
-
                 if (distance > 1) {
                     zombie.translateX(dx / distance * ZOMBIE_SPEED);
                     zombie.translateY(dy / distance * ZOMBIE_SPEED);
                 }
             }
-        }, Duration.seconds(0.1));
+        }, Duration.seconds(1.0 / 30));
     }
 
     public static void main(String[] args) {
