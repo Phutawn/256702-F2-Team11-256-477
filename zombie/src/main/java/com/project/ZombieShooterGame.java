@@ -46,6 +46,7 @@ public class ZombieShooterGame extends GameApplication {
     }
 
     public void startGame() {
+        getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
         player = entityBuilder()
                 .at(400, 300)
