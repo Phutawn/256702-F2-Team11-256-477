@@ -2,8 +2,9 @@ package com.project;
 
 import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
-import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.entity.components.CollidableComponent;
+import com.almasb.fxgl.physics.CollisionHandler;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -15,16 +16,20 @@ import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class ZombieShooterGame extends GameApplication {
 
+    public enum EntityType {
+        PLAYER, BULLET, ZOMBIE
+    }
+
     private Entity player;
     private static final double SPEED = 5;
-    private static final double BULLET_SPEED = 10;
+    private static final double BULLET_SPEED = 400;
     private static final double ZOMBIE_SPEED = 2;
-    private static final int ZOMBIE_SPAWN_INTERVAL = 10; // วินาที
+    private static final int ZOMBIE_SPAWN_INTERVAL = 10; 
     private boolean inputInitialized = false;
     private double lastDirX = 0;
     private double lastDirY = -1;
     private Random random = new Random();
-    private boolean canShoot = true; // ตรวจสอบการยิงเพื่อให้มี delay
+    private boolean canShoot = true; 
 
     @Override
     protected void initSettings(GameSettings settings) {
@@ -32,7 +37,6 @@ public class ZombieShooterGame extends GameApplication {
         settings.setHeight(600);
         settings.setTitle("Zombie Shooter Game");
         settings.setVersion("1.0");
-        // ไม่เรียกใช้ setMainLoopFPS เนื่องจาก FXGL จัดการ FPS โดยอัตโนมัติ
     }
 
     @Override
@@ -48,15 +52,20 @@ public class ZombieShooterGame extends GameApplication {
     public void startGame() {
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
+
+        // เพิ่ม PlayerAmmo(10) เพื่อกำหนดกระสุนเริ่มต้น 10 นัด
         player = entityBuilder()
                 .at(400, 300)
-                .view(new Rectangle(40, 40, Color.BLUE))
+                .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
+                .with(new PlayerHealth()) // เพิ่มระบบพลังชีวิต
+                .with(new PlayerAmmo(10))   // เพิ่มระบบกระสุน
+                .with(new CollidableComponent(true))
+                .type(EntityType.PLAYER)
                 .buildAndAttach();
 
         spawnZombie();
         initInput();
 
-        // ซอมบี้ใหม่เกิดนอกจอทุกๆ 10 วินาที
         run(() -> spawnZombieOutsideScreen(), Duration.seconds(ZOMBIE_SPAWN_INTERVAL));
     }
 
@@ -87,56 +96,71 @@ public class ZombieShooterGame extends GameApplication {
             player.translateY(SPEED);
         });
 
-        // ยิงกระสุนด้วยปุ่ม SPACE
         onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
+        onKeyDown(KeyCode.H, "Heal", () -> player.getComponent(PlayerHealth.class).heal(10)); // ปุ่มกดฮีล
     }
 
-    /*@Override
-    protected void initUI() {
-        super.initUI();
-        
-        // โหลดไฟล์ CSS
-        getGameScene().getRoot().getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
-    }*/
+    @Override
+    protected void initPhysics() {
+        getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.BULLET, EntityType.ZOMBIE) {
+            @Override
+            protected void onCollisionBegin(Entity bullet, Entity zombie) {
+                bullet.removeFromWorld();
+                zombie.removeFromWorld();
+            }
+        });
 
+        getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.ZOMBIE) {
+            @Override
+            protected void onCollisionBegin(Entity player, Entity zombie) {
+                player.getComponent(PlayerHealth.class).takeDamage(10);
+            }
+        });
+    }
 
     private void shootBullet() {
         if (!canShoot)
             return;
+        // ตรวจสอบว่ามีกระสุนพอหรือไม่
+        if (player.getComponent(PlayerAmmo.class).getAmmo() <= 0)
+            return;
         canShoot = false;
-        // เก็บทิศทางสุดท้ายที่ผู้เล่นเคลื่อนที่ไว้
-        final double bulletDirX = lastDirX;
-        final double bulletDirY = lastDirY;
+        
+        // ลดกระสุนเมื่อยิง
+        player.getComponent(PlayerAmmo.class).useAmmo(1);
 
-        // เริ่มยิงที่ตำแหน่งกึ่งกลางของผู้เล่น
+        double dirX = lastDirX;
+        double dirY = lastDirY;
+        if (dirX == 0 && dirY == 0) {
+            dirY = -1;
+        }
+
         double startX = player.getX() + player.getWidth() / 2;
         double startY = player.getY() + player.getHeight() / 2;
 
         Entity bullet = entityBuilder()
                 .at(startX, startY)
-                .view(new Rectangle(10, 5, Color.YELLOW))
+                .type(EntityType.BULLET)
+                .viewWithBBox(new Rectangle(10, 5, Color.YELLOW))
+                .with(new CollidableComponent(true))
                 .buildAndAttach();
 
-        // เคลื่อนที่กระสุนแบบเส้นตรงที่อัตรา 30 FPS
-        run(() -> {
-            bullet.translate(bulletDirX * BULLET_SPEED, bulletDirY * BULLET_SPEED);
-            // เมื่อกระสุนออกนอกขอบจอ ให้ลบออกจากโลกเกม
-            if (bullet.getX() < 0 || bullet.getX() > getSettings().getWidth() ||
-                bullet.getY() < 0 || bullet.getY() > getSettings().getHeight()) {
-                bullet.removeFromWorld();
-            }
-        }, Duration.seconds(1.0 / 30));
+        bullet.addComponent(new BulletControl(dirX, dirY, BULLET_SPEED));
 
-        // ตั้งเวลา delay 1 วินาที เพื่อให้ยิงกระสุนครั้งถัดไปได้
         getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
     }
 
     private void spawnZombie() {
         Entity zombie = entityBuilder()
                 .at(100, 100)
-                .view(new Rectangle(40, 40, Color.RED))
+                .type(EntityType.ZOMBIE)
+                .viewWithBBox(new Rectangle(40, 40, Color.RED))
+                .with(new CollidableComponent(true))
                 .buildAndAttach();
 
+        // เพิ่ม ZombieAttackControl ให้ซอมบี้
+        zombie.addComponent(new ZombieAttackControl());
+        
         trackZombieMovement(zombie);
     }
 
@@ -147,34 +171,26 @@ public class ZombieShooterGame extends GameApplication {
 
         int edge = random.nextInt(4);
         switch (edge) {
-            case 0: // ด้านซ้าย
-                spawnX = -50;
-                spawnY = random.nextDouble() * screenHeight;
-                break;
-            case 1: // ด้านขวา
-                spawnX = screenWidth + 50;
-                spawnY = random.nextDouble() * screenHeight;
-                break;
-            case 2: // ด้านบน
-                spawnX = random.nextDouble() * screenWidth;
-                spawnY = -50;
-                break;
-            default: // ด้านล่าง
-                spawnX = random.nextDouble() * screenWidth;
-                spawnY = screenHeight + 50;
-                break;
+            case 0: spawnX = -50; spawnY = random.nextDouble() * screenHeight; break;
+            case 1: spawnX = screenWidth + 50; spawnY = random.nextDouble() * screenHeight; break;
+            case 2: spawnX = random.nextDouble() * screenWidth; spawnY = -50; break;
+            default: spawnX = random.nextDouble() * screenWidth; spawnY = screenHeight + 50; break;
         }
 
         Entity zombie = entityBuilder()
                 .at(spawnX, spawnY)
-                .view(new Rectangle(40, 40, Color.RED))
+                .type(EntityType.ZOMBIE)
+                .viewWithBBox(new Rectangle(40, 40, Color.RED))
+                .with(new CollidableComponent(true))
                 .buildAndAttach();
 
+        // เพิ่ม ZombieAttackControl ให้ซอมบี้
+        zombie.addComponent(new ZombieAttackControl());
+        
         trackZombieMovement(zombie);
     }
 
     private void trackZombieMovement(Entity zombie) {
-        // อัปเดตการเคลื่อนที่ของซอมบี้ที่อัตรา 30 FPS
         run(() -> {
             if (player != null) {
                 double dx = (player.getX() + player.getWidth() / 2) - (zombie.getX() + zombie.getWidth() / 2);

@@ -22,7 +22,6 @@ public class UIManager {
         menuLayout.setTranslateX(300);
         menuLayout.setTranslateY(200);
 
-        
         FXGL.getGameScene().addUINodes(menuLayout);
     }
 
