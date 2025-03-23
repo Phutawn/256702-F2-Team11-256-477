@@ -7,8 +7,8 @@ import javafx.scene.layout.VBox;
 import javafx.scene.text.Text;
 
 public class UIManager {
-
-    public static void showMainMenu() {
+    
+    /*public static void showMainMenu() {
         FXGL.getGameScene().clearUINodes();
 
         Text title = new Text("Zombie Shooter Game");
@@ -23,7 +23,7 @@ public class UIManager {
         menuLayout.setTranslateY(200);
 
         FXGL.getGameScene().addUINodes(menuLayout);
-    }
+    }*/
 
     public static void showNameInputScreen() {
         FXGL.getGameScene().clearUINodes();

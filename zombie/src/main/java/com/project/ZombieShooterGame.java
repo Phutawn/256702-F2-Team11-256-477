@@ -2,22 +2,27 @@ package com.project;
 
 import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
+import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.components.CollidableComponent;
 import com.almasb.fxgl.physics.CollisionHandler;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
+import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
 
+import java.util.Map;
 import java.util.Random;
 
 import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class ZombieShooterGame extends GameApplication {
 
+    
+
     public enum EntityType {
-        PLAYER, BULLET, ZOMBIE
+        PLAYER, BULLET, ZOMBIE, MAGAZINE
     }
 
     private Entity player;
@@ -33,21 +38,20 @@ public class ZombieShooterGame extends GameApplication {
 
     @Override
     protected void initSettings(GameSettings settings) {
-        settings.setWidth(800);
-        settings.setHeight(600);
         settings.setTitle("Zombie Shooter Game");
         settings.setVersion("1.0");
+        settings.setWidth(800);
+        settings.setHeight(600);
+        settings.setCloseConfirmation(true);
+        settings.setMainMenuEnabled(true);
     }
 
     @Override
     protected void initGame() {
-        showMainMenu();
-    }
-
-    private void showMainMenu() {
         getGameScene().clearUINodes();
-        UIManager.showMainMenu();
+        UIManager.showNameInputScreen();
     }
+    
 
     public void startGame() {
         getGameScene().setBackgroundColor(Color.BLACK);
@@ -57,17 +61,26 @@ public class ZombieShooterGame extends GameApplication {
         player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
+                //.view("smily.jpg")
                 .with(new PlayerHealth()) // เพิ่มระบบพลังชีวิต
                 .with(new PlayerAmmo(10))   // เพิ่มระบบกระสุน
                 .with(new CollidableComponent(true))
                 .type(EntityType.PLAYER)
                 .buildAndAttach();
+        entityBuilder()
+                .type(EntityType.MAGAZINE)
+                .at(500, 200)
+                .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
+                .with(new CollidableComponent(true))
+                .buildAndAttach();
 
-        spawnZombie();
+        spawnMagazine();
+        spawnZombieOutsideScreen();
         initInput();
 
         run(() -> spawnZombieOutsideScreen(), Duration.seconds(ZOMBIE_SPAWN_INTERVAL));
     }
+
 
     @Override
     protected void initInput() {
@@ -102,6 +115,14 @@ public class ZombieShooterGame extends GameApplication {
 
     @Override
     protected void initPhysics() {
+        getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.MAGAZINE) {
+
+            @Override
+            protected void onCollisionBegin(Entity player, Entity MAGAZINE) {
+                MAGAZINE.removeFromWorld();
+            }
+        });
+
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.BULLET, EntityType.ZOMBIE) {
             @Override
             protected void onCollisionBegin(Entity bullet, Entity zombie) {
@@ -117,6 +138,7 @@ public class ZombieShooterGame extends GameApplication {
             }
         });
     }
+
 
     private void shootBullet() {
         if (!canShoot)
@@ -150,18 +172,20 @@ public class ZombieShooterGame extends GameApplication {
         getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
     }
 
-    private void spawnZombie() {
-        Entity zombie = entityBuilder()
-                .at(100, 100)
-                .type(EntityType.ZOMBIE)
-                .viewWithBBox(new Rectangle(40, 40, Color.RED))
-                .with(new CollidableComponent(true))
-                .buildAndAttach();
 
-        // เพิ่ม ZombieAttackControl ให้ซอมบี้
-        zombie.addComponent(new ZombieAttackControl());
-        
-        trackZombieMovement(zombie);
+    private void spawnMagazine() {
+        /*int screenWidth = FXGL.getSettings().getWidth();
+        int screenHeight = FXGL.getSettings().getHeight();
+        double spawnX = random.nextDouble() * screenWidth;
+        double spawnY = screenHeight;
+
+        // สร้าง entity ของ Magazine (สมมติว่ามีฟังก์ชัน spawn() ในเกม)
+        FXGL.spawn("magazine", spawnX, spawnY);
+    
+
+
+    public void startSpawningMagazines() {
+        FXGL.run(() -> spawnMagazine(), Duration.seconds(10)); // เรียกทุก ๆ 10 วินาที*/
     }
 
     private void spawnZombieOutsideScreen() {
@@ -189,6 +213,7 @@ public class ZombieShooterGame extends GameApplication {
         
         trackZombieMovement(zombie);
     }
+    
 
     private void trackZombieMovement(Entity zombie) {
         run(() -> {
