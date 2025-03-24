@@ -4,6 +4,7 @@ import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
+import com.almasb.fxgl.entity.Spawns;
 import com.almasb.fxgl.entity.components.CollidableComponent;
 import com.almasb.fxgl.physics.CollisionHandler;
 import javafx.scene.input.KeyCode;
@@ -33,7 +34,7 @@ public class ZombieShooterGame extends GameApplication {
     private boolean inputInitialized = false;
     private double lastDirX = 0;
     private double lastDirY = -1;
-    private Random random = new Random();
+    protected Random random = new Random();
     private boolean canShoot = true; 
 
     @Override
@@ -56,7 +57,7 @@ public class ZombieShooterGame extends GameApplication {
     public void startGame() {
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
-
+        
         // เพิ่ม PlayerAmmo(10) เพื่อกำหนดกระสุนเริ่มต้น 10 นัด
         player = entityBuilder()
                 .at(400, 300)
@@ -67,18 +68,14 @@ public class ZombieShooterGame extends GameApplication {
                 .with(new CollidableComponent(true))
                 .type(EntityType.PLAYER)
                 .buildAndAttach();
-        entityBuilder()
-                .type(EntityType.MAGAZINE)
-                .at(500, 200)
-                .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
-                .with(new CollidableComponent(true))
-                .buildAndAttach();
 
-        spawnMagazine();
         spawnZombieOutsideScreen();
         initInput();
 
         run(() -> spawnZombieOutsideScreen(), Duration.seconds(ZOMBIE_SPAWN_INTERVAL));
+        FXGL.runOnce(() -> {
+            FXGL.getGameTimer().runAtInterval(() -> spawnMagazine(), Duration.seconds(5));
+        }, Duration.seconds(3));
     }
 
 
@@ -174,19 +171,14 @@ public class ZombieShooterGame extends GameApplication {
 
 
     private void spawnMagazine() {
-        /*int screenWidth = FXGL.getSettings().getWidth();
-        int screenHeight = FXGL.getSettings().getHeight();
-        double spawnX = random.nextDouble() * screenWidth;
-        double spawnY = screenHeight;
-
-        // สร้าง entity ของ Magazine (สมมติว่ามีฟังก์ชัน spawn() ในเกม)
-        FXGL.spawn("magazine", spawnX, spawnY);
-    
-
-
-    public void startSpawningMagazines() {
-        FXGL.run(() -> spawnMagazine(), Duration.seconds(10)); // เรียกทุก ๆ 10 วินาที*/
+        entityBuilder()
+                .type(EntityType.MAGAZINE)
+                .at(random.nextInt(800), random.nextInt(600))
+                .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
+                .with(new CollidableComponent(true))
+                .buildAndAttach();
     }
+    
 
     private void spawnZombieOutsideScreen() {
         int screenWidth = getSettings().getWidth();
