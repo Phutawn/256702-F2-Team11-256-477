@@ -19,7 +19,7 @@ public class BulletControl extends Component {
         entity.translateY(directionY * speed * tpf);
 
         // ลบกระสุนเมื่อออกนอกหน้าจอ
-        if (entity.getX() < 0 || entity.getX() > 800 || entity.getY() < 0 || entity.getY() > 600) {
+        if (entity.getX() < 0 || entity.getX() > 1280 || entity.getY() < 0 || entity.getY() > 720) {
             entity.removeFromWorld();
         }
     }

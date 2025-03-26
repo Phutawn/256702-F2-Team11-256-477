@@ -37,4 +37,9 @@ public class PlayerHealth extends Component {
     private void updateHealthBar() {
         healthBar.setProgress((double) health / MAX_HEALTH);
     }
+
+    public int getHealth() {
+        // TODO Auto-generated method stub
+        throw new UnsupportedOperationException("Unimplemented method 'getHealth'");
+    }
 }

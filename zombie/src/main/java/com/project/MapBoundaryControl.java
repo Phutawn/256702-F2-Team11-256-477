@@ -16,19 +16,21 @@ public class MapBoundaryControl extends Component {
             // ตรวจสอบว่าผู้เล่นชนขอบแมพด้านไหน
             if (entity.getX() <= 0) {
                 direction = "LEFT";
-            } else if (entity.getX() >= 800 - entity.getWidth()) {
+            } else if (entity.getX() >= 1280 - entity.getWidth()) {
                 direction = "RIGHT";
             } else if (entity.getY() <= 0) {
                 direction = "UP";
-            } else if (entity.getY() >= 600 - entity.getHeight()) {
+            } else if (entity.getY() >= 720 - entity.getHeight()) {
                 direction = "DOWN";
             }
 
             // ถ้าชนขอบแมพจริง ให้เปลี่ยนแมพ
             if (direction != null) {
                 mapChanged = true;
-                MapManager.changeMap(entity, direction);
-                
+
+                // เรียกใช้ฟังก์ชันแสดงคัทซีนและเปลี่ยนแมพ
+                MapManager.showCutsceneAndChangeMap(entity, direction);
+
                 // หน่วงเวลา 2 วินาทีเพื่อป้องกันการเปลี่ยนแมพซ้ำๆ
                 FXGL.runOnce(() -> mapChanged = false, Duration.seconds(2));
             }

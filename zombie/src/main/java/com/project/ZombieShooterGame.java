@@ -10,19 +10,29 @@ import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
+import javafx.scene.text.Text;
 import javafx.util.Duration;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class ZombieShooterGame extends GameApplication {
 
+    
     public enum EntityType {
         PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY
     }
 
     private Entity player;
-    private static final double SPEED = 1;
-    private static final double BULLET_SPEED = 400;
+    private static final double SPEED = 5;
+    private static final double BULLET_SPEED = 600;
     private static final double ZOMBIE_SPEED = 2;
     private static final int ZOMBIE_SPAWN_INTERVAL = 10; 
     private boolean inputInitialized = false;
@@ -30,41 +40,53 @@ public class ZombieShooterGame extends GameApplication {
     private double lastDirY = -1;
     protected Random random = new Random();
     private boolean canShoot = true; 
+    private String playerName = "Player"; // ชื่อเริ่มต้น
+
+    public void setPlayerName(String name) {
+        this.playerName = name;
+    }
 
     @Override
     protected void initSettings(GameSettings settings) {
-        settings.setTitle("Zombie Shooter Game");
+        settings.setWidth(1280);  // ความกว้างของจอภาพ
+        settings.setHeight(720);  // ความสูงของจอภาพ
+        settings.setTitle("Zombie Shooter");
         settings.setVersion("1.0");
-        settings.setWidth(800);
-        settings.setHeight(600);
         settings.setCloseConfirmation(true);
         settings.setMainMenuEnabled(true);
+
+        // เปิดใช้งานโหมดเต็มจอ
+        settings.setFullScreenAllowed(true); // อนุญาตให้ใช้โหมดเต็มจอ
+        settings.setFullScreenFromStart(true); // เริ่มเกมในโหมดเต็มจอ
     }
 
     @Override
     protected void initGame() {
         getGameScene().clearUINodes();
-        // เรียก UIManager ตามที่คุณมีอยู่ (เช่นหน้ากรอกชื่อ) 
         UIManager.showNameInputScreen();
     }
     
     public void startGame() {
-        // กำหนดพื้นหลังเริ่มต้นเป็นสีดำ
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
         
-        // สร้างผู้เล่น พร้อมติดตั้ง MapBoundaryControl เพื่อตรวจจับการชนขอบแมพ
         player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
                 //.view("smily.jpg")
-                .with(new PlayerHealth())         // ระบบพลังชีวิต
-                .with(new PlayerAmmo(10))           // ระบบกระสุน
-                .with(new PlayerMedicalSupplies())  // ระบบเก็บ Medical Supplies
+                .with(new PlayerHealth())         
+                .with(new PlayerAmmo(10))           
+                .with(new PlayerMedicalSupplies())  
                 .with(new CollidableComponent(true))
                 .with(new MapBoundaryControl())     // ตรวจจับขอบแมพ
                 .type(EntityType.PLAYER)
                 .buildAndAttach();
+
+        // เพิ่มชื่อผู้เล่นบนหัว
+        Text playerNameText = new Text(playerName);
+        playerNameText.setStyle("-fx-font-size: 18px; -fx-fill: white;");
+        playerNameText.setTranslateY(-20); // วางไว้เหนือผู้เล่น
+        player.getViewComponent().addChild(playerNameText);
 
         spawnZombieOutsideScreen();
         initInput();
@@ -76,6 +98,7 @@ public class ZombieShooterGame extends GameApplication {
             // ดรอป Medical Supply ทุก 7 วินาที
             FXGL.getGameTimer().runAtInterval(() -> spawnMedicalSupply(), Duration.seconds(7));
         }, Duration.seconds(3));
+
     }
 
     @Override
@@ -106,6 +129,7 @@ public class ZombieShooterGame extends GameApplication {
         });
 
         onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
+    
         // กด H เพื่อคราฟชุดประถมพยาบาล (ถ้ามีวัสดุเพียงพอ)
         onKeyDown(KeyCode.H, "Craft First Aid Kit", () -> {
             boolean crafted = player.getComponent(PlayerMedicalSupplies.class).useSuppliesForFirstAid();
@@ -171,10 +195,11 @@ public class ZombieShooterGame extends GameApplication {
         double startX = player.getX() + player.getWidth() / 2;
         double startY = player.getY() + player.getHeight() / 2;
 
+        // เปลี่ยนกระสุนเป็นทรงกลม
         Entity bullet = entityBuilder()
                 .at(startX, startY)
                 .type(EntityType.BULLET)
-                .viewWithBBox(new Rectangle(10, 5, Color.YELLOW))
+                .viewWithBBox(new Circle(5, Color.YELLOW)) // ใช้ Circle แทน Rectangle
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
 
@@ -186,7 +211,7 @@ public class ZombieShooterGame extends GameApplication {
     private void spawnMagazine() {
         entityBuilder()
                 .type(EntityType.MAGAZINE)
-                .at(random.nextInt(800), random.nextInt(600))
+                .at(random.nextInt(1280), random.nextInt(720))
                 .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
@@ -195,7 +220,7 @@ public class ZombieShooterGame extends GameApplication {
     private void spawnMedicalSupply() {
         entityBuilder()
                 .type(EntityType.MEDICAL_SUPPLY)
-                .at(random.nextInt(800), random.nextInt(600))
+                .at(random.nextInt(1280), random.nextInt(720))
                 .viewWithBBox(new Circle(10, 10, 10, Color.LIGHTGREEN))
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
@@ -237,6 +262,10 @@ public class ZombieShooterGame extends GameApplication {
                 }
             }
         }, Duration.seconds(1.0 / 30));
+    }
+
+    public void endGame() {
+        FXGL.getGameController().exit(); // ออกจากเกม
     }
 
     public static void main(String[] args) {
