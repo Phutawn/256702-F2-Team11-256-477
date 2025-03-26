@@ -4,7 +4,6 @@ import com.almasb.fxgl.app.GameApplication;
 import com.almasb.fxgl.app.GameSettings;
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.Entity;
-import com.almasb.fxgl.entity.Spawns;
 import com.almasb.fxgl.entity.components.CollidableComponent;
 import com.almasb.fxgl.physics.CollisionHandler;
 import javafx.scene.input.KeyCode;
@@ -12,22 +11,17 @@ import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.util.Duration;
-
-import java.util.Map;
 import java.util.Random;
-
 import static com.almasb.fxgl.dsl.FXGL.*;
 
 public class ZombieShooterGame extends GameApplication {
 
-    
-
     public enum EntityType {
-        PLAYER, BULLET, ZOMBIE, MAGAZINE
+        PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY
     }
 
     private Entity player;
-    private static final double SPEED = 5;
+    private static final double SPEED = 1;
     private static final double BULLET_SPEED = 400;
     private static final double ZOMBIE_SPEED = 2;
     private static final int ZOMBIE_SPAWN_INTERVAL = 10; 
@@ -50,22 +44,25 @@ public class ZombieShooterGame extends GameApplication {
     @Override
     protected void initGame() {
         getGameScene().clearUINodes();
+        // เรียก UIManager ตามที่คุณมีอยู่ (เช่นหน้ากรอกชื่อ) 
         UIManager.showNameInputScreen();
     }
     
-
     public void startGame() {
+        // กำหนดพื้นหลังเริ่มต้นเป็นสีดำ
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
         
-        // เพิ่ม PlayerAmmo(10) เพื่อกำหนดกระสุนเริ่มต้น 10 นัด
+        // สร้างผู้เล่น พร้อมติดตั้ง MapBoundaryControl เพื่อตรวจจับการชนขอบแมพ
         player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
                 //.view("smily.jpg")
-                .with(new PlayerHealth()) // เพิ่มระบบพลังชีวิต
-                .with(new PlayerAmmo(10))   // เพิ่มระบบกระสุน
+                .with(new PlayerHealth())         // ระบบพลังชีวิต
+                .with(new PlayerAmmo(10))           // ระบบกระสุน
+                .with(new PlayerMedicalSupplies())  // ระบบเก็บ Medical Supplies
                 .with(new CollidableComponent(true))
+                .with(new MapBoundaryControl())     // ตรวจจับขอบแมพ
                 .type(EntityType.PLAYER)
                 .buildAndAttach();
 
@@ -74,10 +71,12 @@ public class ZombieShooterGame extends GameApplication {
 
         run(() -> spawnZombieOutsideScreen(), Duration.seconds(ZOMBIE_SPAWN_INTERVAL));
         FXGL.runOnce(() -> {
-            FXGL.getGameTimer().runAtInterval(() -> spawnMagazine(), Duration.seconds(5));
+            // ดรอป Magazine ทุก 5 วินาที
+            FXGL.getGameTimer().runAtInterval(() -> spawnMagazine(), Duration.seconds(10));
+            // ดรอป Medical Supply ทุก 7 วินาที
+            FXGL.getGameTimer().runAtInterval(() -> spawnMedicalSupply(), Duration.seconds(7));
         }, Duration.seconds(3));
     }
-
 
     @Override
     protected void initInput() {
@@ -107,16 +106,34 @@ public class ZombieShooterGame extends GameApplication {
         });
 
         onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
-        onKeyDown(KeyCode.H, "Heal", () -> player.getComponent(PlayerHealth.class).heal(10)); // ปุ่มกดฮีล
+        // กด H เพื่อคราฟชุดประถมพยาบาล (ถ้ามีวัสดุเพียงพอ)
+        onKeyDown(KeyCode.H, "Craft First Aid Kit", () -> {
+            boolean crafted = player.getComponent(PlayerMedicalSupplies.class).useSuppliesForFirstAid();
+            if (crafted) {
+                player.getComponent(PlayerHealth.class).heal(10);
+            } else {
+                FXGL.showMessage("ไม่พบวัสดุสำหรับคราฟชุดประถมพยาบาลเพียงพอ!");
+            }
+        });
     }
 
     @Override
     protected void initPhysics() {
+        // เมื่อชนกับ Magazine เพิ่มกระสุน 5 นัด
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.MAGAZINE) {
-
             @Override
-            protected void onCollisionBegin(Entity player, Entity MAGAZINE) {
-                MAGAZINE.removeFromWorld();
+            protected void onCollisionBegin(Entity player, Entity magazine) {
+                magazine.removeFromWorld();
+                player.getComponent(PlayerAmmo.class).addAmmo(5);
+            }
+        });
+        
+        // เมื่อชนกับ Medical Supply ให้เพิ่มวัสดุในระบบคราฟ
+        getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.MEDICAL_SUPPLY) {
+            @Override
+            protected void onCollisionBegin(Entity player, Entity supply) {
+                supply.removeFromWorld();
+                player.getComponent(PlayerMedicalSupplies.class).addSupply(1);
             }
         });
 
@@ -136,16 +153,13 @@ public class ZombieShooterGame extends GameApplication {
         });
     }
 
-
     private void shootBullet() {
         if (!canShoot)
             return;
-        // ตรวจสอบว่ามีกระสุนพอหรือไม่
         if (player.getComponent(PlayerAmmo.class).getAmmo() <= 0)
             return;
         canShoot = false;
         
-        // ลดกระสุนเมื่อยิง
         player.getComponent(PlayerAmmo.class).useAmmo(1);
 
         double dirX = lastDirX;
@@ -169,7 +183,6 @@ public class ZombieShooterGame extends GameApplication {
         getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
     }
 
-
     private void spawnMagazine() {
         entityBuilder()
                 .type(EntityType.MAGAZINE)
@@ -179,7 +192,15 @@ public class ZombieShooterGame extends GameApplication {
                 .buildAndAttach();
     }
     
-
+    private void spawnMedicalSupply() {
+        entityBuilder()
+                .type(EntityType.MEDICAL_SUPPLY)
+                .at(random.nextInt(800), random.nextInt(600))
+                .viewWithBBox(new Circle(10, 10, 10, Color.LIGHTGREEN))
+                .with(new CollidableComponent(true))
+                .buildAndAttach();
+    }
+    
     private void spawnZombieOutsideScreen() {
         int screenWidth = getSettings().getWidth();
         int screenHeight = getSettings().getHeight();
@@ -200,13 +221,10 @@ public class ZombieShooterGame extends GameApplication {
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
 
-        // เพิ่ม ZombieAttackControl ให้ซอมบี้
         zombie.addComponent(new ZombieAttackControl());
-        
         trackZombieMovement(zombie);
     }
     
-
     private void trackZombieMovement(Entity zombie) {
         run(() -> {
             if (player != null) {

@@ -8,6 +8,7 @@ public class PlayerAmmo extends Component {
 
     private int ammo;
     private Text ammoDisplay;
+    private static final int MAX_AMMO = 10; // จำนวนกระสุนสูงสุดที่สามารถเก็บได้
 
     public PlayerAmmo(int initialAmmo) {
         this.ammo = initialAmmo;
@@ -29,7 +30,8 @@ public class PlayerAmmo extends Component {
     }
 
     public void addAmmo(int amount) {
-        ammo += amount;
+        // เพิ่มกระสุน แต่ไม่เกินจำนวนสูงสุด MAX_AMMO
+        ammo = Math.min(ammo + amount, MAX_AMMO);
         updateAmmoDisplay();
     }
 
