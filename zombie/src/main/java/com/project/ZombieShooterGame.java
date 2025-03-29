@@ -14,12 +14,15 @@ import javafx.scene.shape.Circle;
 import javafx.scene.shape.Rectangle;
 import javafx.scene.text.Text;
 import javafx.util.Duration;
-
+import com.almasb.fxgl.entity.level.Level;
+import com.almasb.fxgl.entity.level.tiled.TMXLevelLoader;
+import static com.almasb.fxgl.dsl.FXGL.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Map;
 import java.util.Random;
 
 import static com.almasb.fxgl.dsl.FXGL.*;
@@ -40,6 +43,7 @@ public class ZombieShooterGame extends GameApplication {
     protected Random random = new Random();
     private boolean canShoot = true;
     private String playerName = "Player"; // ชื่อเริ่มต้น
+    private Level map;
 
     // ฟิลด์สำหรับ Timer และสถานะเกมในรอบนี้
     public static double currentSurvivalTime = 0;
@@ -94,11 +98,26 @@ public class ZombieShooterGame extends GameApplication {
         }
     }
 
+    @Override
+    protected void initGameVars(Map<String, Object> vars) {
+
+
+        vars.put("map1", "scene1.tmx");
+        
+       
+    }
+
     public void startGame() {
         getGameScene().setBackgroundColor(Color.BLACK);
+    
+        map = FXGL.getAssetLoader().loadLevel(FXGL.gets("map1"), new TMXLevelLoader());
+        //FXGL.getGameWorld().setLevel(map);
+        FXGL.setLevelFromMap("scene1.tmx");
         getGameScene().clearUINodes();
+    }
 
-        // ตั้งค่า UI สำหรับ Timer (ด้านซ้าย) และ High Score (มุมขวาเลื่อนลงให้ชัด)
+    private void setupUI() {
+        // ตั้งค่า UI สำหรับ Timer และ High Score
         timerDisplay = new Text("Time: 0");
         timerDisplay.setStyle("-fx-font-size: 20px; -fx-fill: white;");
         timerDisplay.setTranslateX(10);
@@ -117,7 +136,9 @@ public class ZombieShooterGame extends GameApplication {
         currentSurvivalTime = 0;
         zombieKillCount = 0;
         zombieSpawnMultiplier = 1;
+    }
 
+    private void setupPlayer() {
         player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
@@ -156,23 +177,6 @@ public class ZombieShooterGame extends GameApplication {
             currentSurvivalTime = timeSurvived;
             timerDisplay.setText("Time: " + (int) timeSurvived);
         }, Duration.seconds(1.0 / 60));
-
-        // สร้างปุ่ม Save และ Load ที่ด้านล่างตรงกลางจอ
-        Button saveButton = new Button("Save");
-        saveButton.setStyle("-fx-font-size: 16px;");
-        saveButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
-        saveButton.setOnAction(e -> saveGame());
-
-        Button loadButton = new Button("Load");
-        loadButton.setStyle("-fx-font-size: 16px;");
-        loadButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
-        loadButton.setOnAction(e -> loadGame());
-
-        HBox saveLoadBox = new HBox(10, saveButton, loadButton);
-        // กำหนดตำแหน่งให้อยู่ตรงกลางด้านล่าง (ปรับค่าตามขนาดจอ)
-        saveLoadBox.setTranslateX(getSettings().getWidth() / 2 - 50);
-        saveLoadBox.setTranslateY(getSettings().getHeight() - 50);
-        getGameScene().addUINode(saveLoadBox);
     }
 
     @Override
