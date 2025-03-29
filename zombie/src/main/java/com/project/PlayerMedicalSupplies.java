@@ -40,4 +40,13 @@ public class PlayerMedicalSupplies extends Component {
     private void updateDisplay() {
         suppliesDisplay.setText("Supplies: " + supplies);
     }
+    public int getSupplies() {
+        return supplies;
+    }
+    
+    public void setSupplies(int supplies) {
+        this.supplies = supplies;
+        updateDisplay();
+    }
+    
 }

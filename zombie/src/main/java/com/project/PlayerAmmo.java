@@ -42,4 +42,9 @@ public class PlayerAmmo extends Component {
         }
         ammoDisplay.setText(sb.toString());
     }
+    public void setAmmo(int ammo) {
+        this.ammo = ammo;
+        updateAmmoDisplay();
+    }
+    
 }
