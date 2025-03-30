@@ -81,7 +81,7 @@ public class ZombieShooterGame extends GameApplication {
         settings.setCloseConfirmation(true);
         settings.setMainMenuEnabled(true);
         settings.setFullScreenAllowed(true);
-        settings.setFullScreenFromStart(true);
+        settings.setFullScreenFromStart(false);
     }
 
     // เมธอดสำหรับเริ่มต้นเกมและการโหลด high score จากไฟล์
@@ -120,9 +120,13 @@ public class ZombieShooterGame extends GameApplication {
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
 
+        // สุ่มเลือกแผนที่
+        String[] maps = {"scene1.tmx", "scene2.tmx"};
+        String selectedMap = maps[random.nextInt(maps.length)];
+
         // โหลด Level map จากไฟล์ TMX
-        map = FXGL.getAssetLoader().loadLevel(FXGL.gets("map1"), new TMXLevelLoader());
-        FXGL.setLevelFromMap("scene1.tmx");
+        map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
+        FXGL.setLevelFromMap(selectedMap);
 
         // ตั้งค่า UI สำหรับ Timer และ High Score
         timerDisplay = new Text("Time: 0");
@@ -144,7 +148,7 @@ public class ZombieShooterGame extends GameApplication {
         zombieKillCount = 0;
         zombieSpawnMultiplier = 1;
 
-        // สร้าง Entity ของผู้เล่น พร้อมกำหนดตำแหน่ง เรียกใช้ Component ต่าง ๆ และชนิด Entity
+        // สร้าง Entity ของผู้เล่น
         player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
@@ -152,7 +156,7 @@ public class ZombieShooterGame extends GameApplication {
                 .with(new PlayerAmmo(10))
                 .with(new PlayerMedicalSupplies())
                 .with(new CollidableComponent(true))
-                .with(new MapBoundaryControl())
+                .with(new KeepInBoundsControl(0, 0, map.getWidth(), map.getHeight())) // ป้องกันไม่ให้ออกจากแมพ
                 .type(EntityType.PLAYER)
                 .buildAndAttach();
 
@@ -162,13 +166,21 @@ public class ZombieShooterGame extends GameApplication {
         playerNameText.setTranslateY(-20);
         player.getViewComponent().addChild(playerNameText);
 
+        // ตั้งค่ากล้องให้ติดตามตัวละคร
+        FXGL.getGameScene().getViewport().bindToEntity(player, getSettings().getWidth() / 2.0, getSettings().getHeight() / 2.0);
+
+        // กำหนดขอบเขตของกล้องให้ตรงกับขนาดของแมพ
+        FXGL.getGameScene().getViewport().setBounds(0, 0, (int) map.getWidth(), (int) map.getHeight());
+
+        // ซูมกล้องเข้าไปที่ตัวละคร
+        FXGL.getGameScene().getViewport().setZoom(2.5); // ค่า 2.5 คือระดับการซูม (ปรับได้ตามต้องการ)
+
         // เริ่ม spawn ซอมบี้ครั้งแรก
         spawnZombieOutsideScreen();
         // เริ่มต้นรับค่า Input จากผู้เล่น
         initInput();
 
         // ตั้งเวลาให้ทุก 10 วินาที spawn ซอมบี้เพิ่มจำนวนตาม zombieSpawnMultiplier 
-        // และเพิ่มค่า multiplier ให้เป็นสองเท่า
         FXGL.getGameTimer().runAtInterval(() -> {
             spawnZombieOutsideScreen();
             zombieSpawnMultiplier *= 2;
@@ -186,23 +198,6 @@ public class ZombieShooterGame extends GameApplication {
             currentSurvivalTime = timeSurvived;
             timerDisplay.setText("Time: " + (int) timeSurvived);
         }, Duration.seconds(1.0 / 60));
-
-        // สร้างปุ่ม Save และ Load สำหรับบันทึกและโหลดสถานะเกม
-        Button saveButton = new Button("Save");
-        saveButton.setStyle("-fx-font-size: 16px;");
-        saveButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
-        saveButton.setOnAction(e -> saveGame());
-
-        Button loadButton = new Button("Load");
-        loadButton.setStyle("-fx-font-size: 16px;");
-        loadButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
-        loadButton.setOnAction(e -> loadGame());
-
-        // จัดกลุ่มปุ่ม Save และ Load ให้อยู่ใน HBox และตั้งตำแหน่งให้อยู่ตรงกลางด้านล่าง
-        HBox saveLoadBox = new HBox(10, saveButton, loadButton);
-        saveLoadBox.setTranslateX(getSettings().getWidth() / 2 - 50);
-        saveLoadBox.setTranslateY(getSettings().getHeight() - 50);
-        getGameScene().addUINode(saveLoadBox);
     }
 
     // เมธอดสำหรับรับค่า Input จากคีย์บอร์ด (เคลื่อนที่, ยิง, คราฟ First Aid Kit)
