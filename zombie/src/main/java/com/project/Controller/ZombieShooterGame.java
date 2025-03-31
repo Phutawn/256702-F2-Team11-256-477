@@ -117,6 +117,13 @@ public class ZombieShooterGame extends GameApplication {
 
     // เมธอดสำหรับเริ่มต้นและตั้งค่าองค์ประกอบหลักของเกม
     public void startGame() {
+        // เพิ่มบรรทัดนี้เพื่อให้แน่ใจว่า ZombieAnimationInjector ถูกโหลด
+        try {
+            Class.forName("com.project.model.ZombieAnimationInjector");
+        } catch (ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
         // ตั้งค่าสีพื้นหลังและล้าง UI nodes เดิม
         getGameScene().setBackgroundColor(Color.WHITE);
         getGameScene().clearUINodes();
@@ -359,7 +366,7 @@ public class ZombieShooterGame extends GameApplication {
                 .buildAndAttach();
     }
 
-    // เมธอดสำหรับ spawn ซอมบี้ให้ออกนอกขอบจอ
+    // เมธอดสำหรับ spawn ซอมบี้ให้ออกนอกขอบจอ โดยใช้ view เป็น Circle (โปร่งใส) เพื่อให้ ZombieAnimationControl แทนที่ view เดิม
     private void spawnZombieOutsideScreen() {
         for (int i = 0; i < zombieSpawnMultiplier; i++) {
             int screenWidth = getSettings().getWidth();
@@ -385,21 +392,22 @@ public class ZombieShooterGame extends GameApplication {
                     spawnY = screenHeight + 50;
                     break;
             }
-
-            // สร้าง Entity ของซอมบี้
+    
+            // สร้าง Entity ของซอมบี้โดยใช้ view แบบโปร่งใสเพื่อให้ ZombieAnimationControl แทรก sprite ที่ต้องการ
             Entity zombie = entityBuilder()
                     .at(spawnX, spawnY)
                     .type(EntityType.ZOMBIE)
-                    .viewWithBBox(new Rectangle(40, 40, Color.RED))
+                    .viewWithBBox(new Circle(20, Color.TRANSPARENT))
                     .with(new CollidableComponent(true))
                     .buildAndAttach();
-
+    
             // เพิ่มคอนโทรลสำหรับการโจมตีของซอมบี้
             zombie.addComponent(new ZombieAttackControl());
             // เริ่มติดตามการเคลื่อนที่ของซอมบี้ไปยังผู้เล่น
             trackZombieMovement(zombie);
         }
     }
+    
 
     // เมธอดสำหรับติดตามการเคลื่อนที่ของซอมบี้ให้ตามผู้เล่น
     private void trackZombieMovement(Entity zombie) {
