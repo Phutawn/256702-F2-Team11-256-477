@@ -13,6 +13,8 @@ import com.project.View.UIManager;
 import com.project.model.PlayerAmmo;
 import com.project.model.PlayerHealth;
 import com.project.model.PlayerMedicalSupplies;
+import javafx.scene.control.Button;
+import javafx.scene.layout.HBox;
 import javafx.scene.input.KeyCode;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Circle;
@@ -32,7 +34,7 @@ public class ZombieShooterGame extends GameApplication {
 
     // ประกาศ Enum สำหรับกำหนดประเภทของ Entity ที่ใช้ในเกม
     public enum EntityType {
-        PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY, WALL
+        PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY
     }
 
     // ตัวแปรสำหรับเก็บข้อมูลผู้เล่นและค่าคงที่ต่าง ๆ
@@ -110,54 +112,27 @@ public class ZombieShooterGame extends GameApplication {
     @Override
     protected void initGameVars(Map<String, Object> vars) {
         vars.put("map1", "scene1.tmx");
+        vars.put("map2", "scene2.tmx");
     }
 
-    
     // เมธอดสำหรับเริ่มต้นและตั้งค่าองค์ประกอบหลักของเกม
     public void startGame() {
         // ตั้งค่าสีพื้นหลังและล้าง UI nodes เดิม
-        getGameScene().setBackgroundColor(Color.BLACK);
+        getGameScene().setBackgroundColor(Color.WHITE);
         getGameScene().clearUINodes();
-        FXGL.getGameWorld().addEntityFactory(new BackgroundFactory());
-        
-        // สุ่มเลือกแผนที่
+
+        // ลงทะเบียน BackgroundFactory
+        //FXGL.getGameWorld().addEntityFactory(new BackgroundFactory());
+
+        // คอมเมนต์การโหลดแผนที่ .tmx หากต้องการรันด้วยพื้นหลังสีดำ
+        /*
         String[] maps = {"scene1.tmx", "scene2.tmx"};
         String selectedMap = maps[random.nextInt(maps.length)];
-
-        // โหลด Level map จากไฟล์ TMX
         map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
         FXGL.setLevelFromMap(selectedMap);
+        */
 
         // ตั้งค่า UI สำหรับ Timer และ High Score
-        setupUI();
-
-        // รีเซ็ตสถานะและค่าตัวแปรสำหรับรอบเกมใหม่
-        resetGameState();
-
-        // สร้าง Entity ของผู้เล่น
-        player = entityBuilder()
-                .at(400, 300)
-                .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
-                .with(new PlayerHealth())
-                .with(new PlayerAmmo(10))
-                .with(new PlayerMedicalSupplies())
-                .with(new CollidableComponent(true))
-                .type(EntityType.PLAYER)
-                .buildAndAttach();
-
-        // ตั้งค่ากล้องให้ติดตามตัวละคร
-        setupCamera();
-
-        // เริ่ม spawn ซอมบี้ครั้งแรก
-        spawnZombieOutsideScreen();
-        // เริ่มต้นรับค่า Input จากผู้เล่น
-        initInput();
-
-        // ตั้งเวลาให้ทุก 10 วินาที spawn ซอมบี้เพิ่มจำนวนตาม zombieSpawnMultiplier 
-        setupTimers();
-    }
-
-    private void setupUI() {
         timerDisplay = new Text("Time: 0");
         timerDisplay.setStyle("-fx-font-size: 20px; -fx-fill: white;");
         timerDisplay.setTranslateX(10);
@@ -170,19 +145,76 @@ public class ZombieShooterGame extends GameApplication {
         highScoreDisplay.setTranslateX(getSettings().getWidth() - 250);
         highScoreDisplay.setTranslateY(40);
         getGameScene().addUINode(highScoreDisplay);
-    }
 
-    private void resetGameState() {
+        // รีเซ็ตสถานะและค่าตัวแปรสำหรับรอบเกมใหม่
         timeSurvived = 0;
         currentSurvivalTime = 0;
         zombieKillCount = 0;
         zombieSpawnMultiplier = 1;
-    }
 
-    private void setupCamera() {
+        // สร้าง Entity ของผู้เล่น
+        player = entityBuilder()
+                .at(400, 300)
+                .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
+                .with(new PlayerHealth())
+                .with(new PlayerAmmo(10))
+                .with(new PlayerMedicalSupplies())
+                .with(new CollidableComponent(true))
+                .type(EntityType.PLAYER)
+                .buildAndAttach();
+
+        // เพิ่มชื่อผู้เล่นให้แสดงบนหัวของผู้เล่น
+        Text playerNameText = new Text(playerName);
+        playerNameText.setStyle("-fx-font-size: 18px; -fx-fill: white;");
+        playerNameText.setTranslateY(-20);
+        player.getViewComponent().addChild(playerNameText);
+
+        // ตั้งค่ากล้องให้ติดตามตัวละคร
         FXGL.getGameScene().getViewport().bindToEntity(player, getSettings().getWidth() / 2.0, getSettings().getHeight() / 2.0);
-        FXGL.getGameScene().getViewport().setBounds(0, 0, (int) map.getWidth(), (int) map.getHeight());
-        FXGL.getGameScene().getViewport().setZoom(2.5); // ค่า 2.5 คือระดับการซูม (ปรับได้ตามต้องการ)
+
+        // ซูมกล้องเข้าไปที่ตัวละคร
+        FXGL.getGameScene().getViewport().setZoom(1); // ค่า 2.5 คือระดับการซูม (ปรับได้ตามต้องการ)
+
+        // เริ่ม spawn ซอมบี้ครั้งแรก
+        spawnZombieOutsideScreen();
+        // เริ่มต้นรับค่า Input จากผู้เล่น
+        initInput();
+
+        // ตั้งเวลาให้ทุก 10 วินาที spawn ซอมบี้เพิ่มจำนวนตาม zombieSpawnMultiplier 
+        FXGL.getGameTimer().runAtInterval(() -> {
+            spawnZombieOutsideScreen();
+            zombieSpawnMultiplier *= 2;
+        }, Duration.seconds(10));
+
+        // หลังจาก 3 วินาที ให้เริ่ม spawn Magazine และ Medical Supply เป็นระยะ
+        FXGL.runOnce(() -> {
+            FXGL.getGameTimer().runAtInterval(() -> spawnMagazine(), Duration.seconds(10));
+            FXGL.getGameTimer().runAtInterval(() -> spawnMedicalSupply(), Duration.seconds(7));
+        }, Duration.seconds(3));
+
+        // ตัวจับเวลาที่อัปเดตทุก frame เพื่อคำนวณเวลาที่รอดอยู่ในเกม
+        run(() -> {
+            timeSurvived += 1.0 / 60;
+            currentSurvivalTime = timeSurvived;
+            timerDisplay.setText("Time: " + (int) timeSurvived);
+        }, Duration.seconds(1.0 / 60));
+
+        // สร้างปุ่ม Save และ Load สำหรับบันทึกและโหลดสถานะเกม
+        Button saveButton = new Button("Save");
+        saveButton.setStyle("-fx-font-size: 16px;");
+        saveButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
+        saveButton.setOnAction(e -> saveGame());
+
+        Button loadButton = new Button("Load");
+        loadButton.setStyle("-fx-font-size: 16px;");
+        loadButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
+        loadButton.setOnAction(e -> loadGame());
+
+        // จัดกลุ่มปุ่ม Save และ Load ให้อยู่ใน HBox และตั้งตำแหน่งให้อยู่ตรงกลางด้านล่าง
+        HBox saveLoadBox = new HBox(10, saveButton, loadButton);
+        saveLoadBox.setTranslateX(getSettings().getWidth() / 2 - 50);
+        saveLoadBox.setTranslateY(getSettings().getHeight() - 50);
+        getGameScene().addUINode(saveLoadBox);
     }
 
     // เมธอดสำหรับรับค่า Input จากคีย์บอร์ด (เคลื่อนที่, ยิง, คราฟ First Aid Kit)
@@ -219,16 +251,14 @@ public class ZombieShooterGame extends GameApplication {
         onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
 
         // กำหนดการคราฟ First Aid Kit เมื่อกด H (ถ้ามีวัสดุเพียงพอ)
-        onKeyDown(KeyCode.H, "Craft First Aid Kit", this::craftFirstAidKit);
-    }
-
-    private void craftFirstAidKit() {
-        boolean crafted = player.getComponent(PlayerMedicalSupplies.class).useSuppliesForFirstAid();
-        if (crafted) {
-            player.getComponent(PlayerHealth.class).heal(10);
-        } else {
-            FXGL.showMessage("ไม่พบวัสดุสำหรับคราฟชุดประถมพยาบาลเพียงพอ!");
-        }
+        onKeyDown(KeyCode.H, "Craft First Aid Kit", () -> {
+            boolean crafted = player.getComponent(PlayerMedicalSupplies.class).useSuppliesForFirstAid();
+            if (crafted) {
+                player.getComponent(PlayerHealth.class).heal(10);
+            } else {
+                FXGL.showMessage("ไม่พบวัสดุสำหรับคราฟชุดประถมพยาบาลเพียงพอ!");
+            }
+        });
     }
 
     // เมธอดสำหรับตั้งค่า Physics และการชนของ Entity ต่าง ๆ
@@ -314,7 +344,7 @@ public class ZombieShooterGame extends GameApplication {
         entityBuilder()
                 .type(EntityType.MAGAZINE)
                 .at(random.nextInt(1280), random.nextInt(720))
-                .viewWithBBox(new Circle(15, Color.YELLOW))
+                .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
     }
@@ -324,7 +354,7 @@ public class ZombieShooterGame extends GameApplication {
         entityBuilder()
                 .type(EntityType.MEDICAL_SUPPLY)
                 .at(random.nextInt(1280), random.nextInt(720))
-                .viewWithBBox(new Circle(10, Color.LIGHTGREEN))
+                .viewWithBBox(new Circle(10, 10, 10, Color.LIGHTGREEN))
                 .with(new CollidableComponent(true))
                 .buildAndAttach();
     }
@@ -384,24 +414,6 @@ public class ZombieShooterGame extends GameApplication {
                 }
             }
         }, Duration.seconds(1.0 / 30));
-    }
-
-    private void setupTimers() {
-        getGameTimer().runAtInterval(() -> {
-            spawnZombieOutsideScreen();
-            zombieSpawnMultiplier *= 2;
-        }, Duration.seconds(10));
-
-        FXGL.runOnce(() -> {
-            getGameTimer().runAtInterval(this::spawnMagazine, Duration.seconds(10));
-            getGameTimer().runAtInterval(this::spawnMedicalSupply, Duration.seconds(7));
-        }, Duration.seconds(3));
-
-        run(() -> {
-            timeSurvived += 1.0 / 60;
-            currentSurvivalTime = timeSurvived;
-            timerDisplay.setText("Time: " + (int) timeSurvived);
-        }, Duration.seconds(1.0 / 60));
     }
 
     // เมธอดสำหรับเซฟสถานะเกมไปที่ไฟล์ "savegame.txt"
