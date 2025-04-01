@@ -41,7 +41,7 @@ public class CharacterFactory implements EntityFactory {
                 .with(physics)
                 .with(new CollidableComponent(true))
                 .with(new ControllerComponent())
-                .with(new AnimationComponent("Actor1.png"))
+                .with(new AnimationComponent("Player.png"))
                 .with(new StatusComponent("Player", 100, 100, 100, 100)) // เพิ่ม Status Component
                 .with(new PlayerAmmo(10)) // เพิ่มระบบกระสุน
                 .build();

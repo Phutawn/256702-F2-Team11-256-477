@@ -13,6 +13,7 @@ import javafx.util.Duration;
 public class AnimationComponent extends Component {
      
     private String currentAnimationState = "idleDown";
+    private String lastHorizontalDirection = "right"; // ค่าเริ่มต้นเป็น "right"
     private final AnimatedTexture texture;
     private final AnimationChannel left;
     private final AnimationChannel right;
@@ -39,14 +40,14 @@ public class AnimationComponent extends Component {
         int frameH = (int) image.getHeight() / rows;
 
 
-        left = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 3, 5);
-        right = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 6, 8);
+        left = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 12, 17);
+        right = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 18, 23);
         up = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 9, 11);
         down = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 0, 2);
         idleDown = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 1, 1);
         idleUp = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 10, 10);
-        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 7, 7);
-        idleLeft = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 4, 4);
+        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 6, 11);
+        idleLeft = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 0, 5);
 
 
         texture = new AnimatedTexture(idleDown);
@@ -60,17 +61,31 @@ public class AnimationComponent extends Component {
     }
 
     public void walkUp() {
-        if (texture.getAnimationChannel() != up) {
-            texture.playAnimationChannel(up);
-            texture.loopAnimationChannel(up);
+        if (lastHorizontalDirection.equals("left")) {
+            if (texture.getAnimationChannel() != left) {
+                texture.playAnimationChannel(left);
+                texture.loopAnimationChannel(left);
+            }
+        } else if (lastHorizontalDirection.equals("right")) {
+            if (texture.getAnimationChannel() != right) {
+                texture.playAnimationChannel(right);
+                texture.loopAnimationChannel(right);
+            }
         }
         currentAnimationState = "walkUp";
     }
 
     public void walkDown() {
-        if (texture.getAnimationChannel() != down) {
-            texture.playAnimationChannel(down);
-            texture.loopAnimationChannel(down);
+        if (lastHorizontalDirection.equals("left")) {
+            if (texture.getAnimationChannel() != left) {
+                texture.playAnimationChannel(left);
+                texture.loopAnimationChannel(left);
+            }
+        } else if (lastHorizontalDirection.equals("right")) {
+            if (texture.getAnimationChannel() != right) {
+                texture.playAnimationChannel(right);
+                texture.loopAnimationChannel(right);
+            }
         }
         currentAnimationState = "walkDown";
     }
@@ -81,6 +96,7 @@ public class AnimationComponent extends Component {
             texture.loopAnimationChannel(left);
         }
         currentAnimationState = "walkLeft";
+        lastHorizontalDirection = "left"; // บันทึกการเดินซ้าย
     }
 
     public void walkRight() {
@@ -89,6 +105,7 @@ public class AnimationComponent extends Component {
             texture.loopAnimationChannel(right);
         }
         currentAnimationState = "walkRight";
+        lastHorizontalDirection = "right"; // บันทึกการเดินขวา
     }
 
     public String checkwalk(){
