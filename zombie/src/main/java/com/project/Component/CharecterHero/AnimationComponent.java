@@ -32,7 +32,7 @@ public class AnimationComponent extends Component {
         Image image = FXGL.image(nameFile);
 
 
-        int columns = 3;   
+        int columns = 6;   
         int rows = 4;     
 
         int frameW = (int) image.getWidth() / columns;

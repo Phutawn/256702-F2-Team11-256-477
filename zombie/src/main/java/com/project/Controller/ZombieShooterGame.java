@@ -240,52 +240,64 @@ public class ZombieShooterGame extends GameApplication {
     // เมธอดสำหรับรับค่า Input จากคีย์บอร์ด (เคลื่อนที่, ยิง, คราฟ First Aid Kit)
     @Override
     protected void initInput() {
+        // เพิ่มการผูกปุ่ม Space สำหรับการยิง
+        FXGL.onKeyDown(KeyCode.SPACE, () -> {
+            if (player != null && player.getComponent(PlayerAmmo.class).getAmmo() > 0) {
+                shootBullet();
+            }
+        });
 
-       
+        // อัปเดตทิศทางล่าสุดเมื่อผู้เล่นเคลื่อนที่
         FXGL.getInput().addAction(new UserAction("Right") {
-        @Override
-        protected void onAction() {
-            if (FXGL.getb("Phase") == true){
-            player.getComponent(ControllerComponent.class).moveRight();
+            @Override
+            protected void onAction() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).moveRight();
+                    lastDirX = 1;
+                    lastDirY = 0;
+                }
             }
-        }
 
-        @Override
-        protected void onActionEnd() {
-            if (FXGL.getb("Phase") == true){
-            player.getComponent(ControllerComponent.class).stop();
+            @Override
+            protected void onActionEnd() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).stop();
+                }
             }
-        }
         }, KeyCode.D);
 
         FXGL.getInput().addAction(new UserAction("Left") {
-        @Override
-        protected void onAction() {
-            if(FXGL.getb("Phase") == true){
-                player.getComponent(ControllerComponent.class).moveLeft();
-             }
+            @Override
+            protected void onAction() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).moveLeft();
+                    lastDirX = -1;
+                    lastDirY = 0;
+                }
             }
 
-        @Override
-        protected void onActionEnd() {
-            if(FXGL.getb("Phase") == true){
-            player.getComponent(ControllerComponent.class).stop();
+            @Override
+            protected void onActionEnd() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).stop();
+                }
             }
-        }
         }, KeyCode.A);
 
         FXGL.getInput().addAction(new UserAction("Up") {
-        @Override
-        protected void onAction() {
-            if(FXGL.getb("Phase") == true){
-                player.getComponent(ControllerComponent.class).moveUp();
-              }
+            @Override
+            protected void onAction() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).moveUp();
+                    lastDirX = 0;
+                    lastDirY = -1;
+                }
             }
 
-        @Override
-        protected void onActionEnd() {
-            if(FXGL.getb("Phase") == true){
-                player.getComponent(ControllerComponent.class).stop();
+            @Override
+            protected void onActionEnd() {
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).stop();
                 }
             }
         }, KeyCode.W);
@@ -293,35 +305,20 @@ public class ZombieShooterGame extends GameApplication {
         FXGL.getInput().addAction(new UserAction("Down") {
             @Override
             protected void onAction() {
-                if(FXGL.getb("Phase") == true){
-                player.getComponent(ControllerComponent.class).moveDown();
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).moveDown();
+                    lastDirX = 0;
+                    lastDirY = 1;
                 }
             }
 
             @Override
             protected void onActionEnd() {
-                if(FXGL.getb("Phase") == true){
-                player.getComponent(ControllerComponent.class).stop();
+                if (FXGL.getb("Phase") == true) {
+                    player.getComponent(ControllerComponent.class).stop();
                 }
             }
         }, KeyCode.S);
-
-        FXGL.getInput().addAction(new UserAction("Shoot") {
-            @Override
-            protected void onActionBegin() {
-                if (FXGL.getb("Phase") == true){
-                shootBullet();
-                }
-            }
-        }, KeyCode.SPACE);
-
-            
-
-        
-        
-        
-
-        
     }
 
     // เมธอดสำหรับตั้งค่า Physics และการชนของ Entity ต่าง ๆ
