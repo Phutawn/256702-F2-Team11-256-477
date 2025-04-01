@@ -12,6 +12,7 @@ import com.almasb.fxgl.physics.HitBox;
 import com.almasb.fxgl.physics.PhysicsComponent;
 import com.almasb.fxgl.physics.box2d.dynamics.BodyType;
 import com.almasb.fxgl.scene.Scene;
+import com.project.Controller.ZombieShooterGame.EntityType;
 
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
@@ -24,7 +25,7 @@ public class BackgroundFactory implements EntityFactory {
         
         physics.setBodyType(BodyType.STATIC);
         return FXGL.entityBuilder(data)
-                .type(SceneType.Wall)
+                .type(EntityType.BARRIER)
                  .at(data.getX(),data.getY())
                 .bbox(new HitBox(BoundingShape.box(data.<Integer>get("width"),data.<Integer>get("height"))))
                 .with(new PhysicsComponent())
@@ -34,10 +35,10 @@ public class BackgroundFactory implements EntityFactory {
     
 
     
+
     
 
     
-   
 
       
     

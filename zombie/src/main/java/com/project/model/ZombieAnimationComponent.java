@@ -17,7 +17,7 @@ public class ZombieAnimationComponent extends Component {
     public ZombieAnimationComponent() {
         // สร้าง Animation Channel สำหรับท่ายืน (Idle)
         idleAnimation = new AnimationChannel(
-            FXGL.image("assets/levels/Zombie_Idle.png"),
+            FXGL.image("Zombie.png"),
             4, // จำนวนเฟรมทั้งหมด
             32, // ความกว้างของแต่ละเฟรม
             32, // ความสูงของแต่ละเฟรม
@@ -28,7 +28,7 @@ public class ZombieAnimationComponent extends Component {
 
         // สร้าง Animation Channel สำหรับท่าวิ่ง (Run)
         runAnimation = new AnimationChannel(
-            FXGL.image("assets/levels/Zombie_run.png"),
+            FXGL.image("Zombie.png"),
             8, // จำนวนเฟรมทั้งหมด
             32, // ความกว้างของแต่ละเฟรม
             32, // ความสูงของแต่ละเฟรม

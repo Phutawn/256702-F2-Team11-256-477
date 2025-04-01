@@ -38,18 +38,19 @@ import java.util.Map;
 import java.util.Random;
 import static com.almasb.fxgl.dsl.FXGL.*;
 import javafx.geometry.Point2D;
+import com.almasb.fxgl.entity.SpawnData;
 
 public class ZombieShooterGame extends GameApplication {
 
     // ประกาศ Enum สำหรับกำหนดประเภทของ Entity ที่ใช้ในเกม
     public enum EntityType {
-        PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY
+        PLAYER, BULLET, ZOMBIE, MAGAZINE, MEDICAL_SUPPLY, WALL, BARRIER
     }
 
     // ตัวแปรสำหรับเก็บข้อมูลผู้เล่นและค่าคงที่ต่าง ๆ
     private Entity player;
     private static final double BULLET_SPEED = 600;
-    private static final double ZOMBIE_SPEED = 2;
+    private static final double ZOMBIE_SPEED = 1;
     private boolean inputInitialized = false;
     private double lastDirX = 0;
     private double lastDirY = -1;
@@ -133,30 +134,59 @@ public class ZombieShooterGame extends GameApplication {
         getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
 
-        
+        // เพิ่ม Entity Factories
         FXGL.getGameWorld().addEntityFactory(new BackgroundFactory());
         FXGL.getGameWorld().addEntityFactory(new CharacterFactory());
        
-        
+        // โหลด map
         String[] maps = {"scene1.tmx", "scene2.tmx"};
         String selectedMap = maps[random.nextInt(maps.length)];
-        map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
-        FXGL.setLevelFromMap(selectedMap);
-
-        player = FXGL.getGameWorld().getEntitiesByType(PlayerType.PLAYER).get(0);
+        System.out.println("Loading map: " + selectedMap);
         
-        FXGL.getGameScene().getViewport().bindToEntity(player,FXGL.getAppWidth()/2, FXGL.getAppHeight()/2);
+        try {
+            map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
+            FXGL.setLevelFromMap(selectedMap);
+            System.out.println("Map loaded successfully. Width: " + map.getWidth() + ", Height: " + map.getHeight());
+        } catch (Exception e) {
+            System.err.println("Error loading map: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        // หาผู้เล่นและตั้งค่า viewport
+        try {
+            player = FXGL.getGameWorld().getEntitiesByType(PlayerType.PLAYER).get(0);
+            System.out.println("Player found at: " + player.getX() + ", " + player.getY());
+        } catch (Exception e) {
+            System.err.println("Error finding player: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+        FXGL.getGameScene().getViewport().bindToEntity(player, FXGL.getAppWidth()/2, FXGL.getAppHeight()/2);
         FXGL.getGameScene().getViewport().setZoom(2.8);
-        int mapWidth = (int) map.getWidth() * 32;
-        int mapHeight = (int) map.getHeight() * 32;
-
-        FXGL.getGameScene().getViewport().setBounds(0, 0, mapWidth, mapHeight);
+        FXGL.getGameScene().getViewport().setBounds(0, 0, 800, 800);
         FXGL.getGameScene().getViewport().setLazy(true);
-        
-       
-        
 
-        // ตั้งค่า UI สำหรับ Timer และ High Score
+        // ตั้งค่า UI
+        setupUI();
+
+        // รีเซ็ตสถานะเกม
+        resetGameState();
+
+        // เริ่มระบบ spawn
+        startSpawningSystem();
+
+        // เริ่มระบบจับเวลา
+        startTimerSystem();
+
+        // ตั้งค่าปุ่ม Save/Load
+        setupSaveLoadButtons();
+
+        // เริ่มระบบ Input และ Physics
+        initInput();
+        initPhysics();
+    }
+
+    private void setupUI() {
         timerDisplay = new Text("Time: 0");
         timerDisplay.setStyle("-fx-font-size: 20px; -fx-fill: white;");
         timerDisplay.setTranslateX(10);
@@ -169,49 +199,51 @@ public class ZombieShooterGame extends GameApplication {
         highScoreDisplay.setTranslateX(getSettings().getWidth() - 250);
         highScoreDisplay.setTranslateY(40);
         getGameScene().addUINode(highScoreDisplay);
+    }
 
-        // รีเซ็ตสถานะและค่าตัวแปรสำหรับรอบเกมใหม่
+    private void resetGameState() {
         timeSurvived = 0;
         currentSurvivalTime = 0;
         zombieKillCount = 0;
         zombieSpawnMultiplier = 1;
-       
-        // เริ่ม spawn ซอมบี้ครั้งแรก
-        spawnZombieOutsideScreen();
-        // เริ่มต้นรับค่า Input จากผู้เล่น
+    }
+
+    private void startSpawningSystem() {
+        System.out.println("Starting spawning system...");
         
-
-        // ตั้งเวลาให้ทุก 10 วินาที spawn ซอมบี้เพิ่มจำนวนตาม zombieSpawnMultiplier 
-        FXGL.getGameTimer().runAtInterval(() -> {
-            spawnZombieOutsideScreen();
-            zombieSpawnMultiplier *= 2;
-        }, Duration.seconds(10));
-
-        // หลังจาก 3 วินาที ให้เริ่ม spawn Magazine และ Medical Supply เป็นระยะ
+        // เริ่ม spawn ซอมบี้ครั้งแรกทันที
         FXGL.runOnce(() -> {
-            FXGL.getGameTimer().runAtInterval(() -> spawnMagazine(), Duration.seconds(10));
-            FXGL.getGameTimer().runAtInterval(() -> spawnMedicalSupply(), Duration.seconds(7));
-        }, Duration.seconds(3));
+            System.out.println("Spawning initial wave of zombies...");
+            spawnZombieOutsideScreen();
+        }, Duration.seconds(2));
 
-        // ตัวจับเวลาที่อัปเดตทุก frame เพื่อคำนวณเวลาที่รอดอยู่ในเกม
+        // ตั้งเวลาให้ทุก 5 วินาที spawn ซอมบี้เพิ่มจำนวน
+        FXGL.getGameTimer().runAtInterval(() -> {
+            System.out.println("Spawning new wave of zombies. Multiplier: " + zombieSpawnMultiplier);
+            spawnZombieOutsideScreen();
+            zombieSpawnMultiplier++;
+        }, Duration.seconds(5));
+    }
+
+    private void startTimerSystem() {
         run(() -> {
             timeSurvived += 1.0 / 60;
             currentSurvivalTime = timeSurvived;
             timerDisplay.setText("Time: " + (int) timeSurvived);
         }, Duration.seconds(1.0 / 60));
+    }
 
-        // สร้างปุ่ม Save และ Load สำหรับบันทึกและโหลดสถานะเกม
+    private void setupSaveLoadButtons() {
         Button saveButton = new Button("Save");
         saveButton.setStyle("-fx-font-size: 16px;");
-        saveButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
+        saveButton.setFocusTraversable(false);
         saveButton.setOnAction(e -> saveGame());
 
         Button loadButton = new Button("Load");
         loadButton.setStyle("-fx-font-size: 16px;");
-        loadButton.setFocusTraversable(false); // ไม่ให้รับ key event จาก spacebar
+        loadButton.setFocusTraversable(false);
         loadButton.setOnAction(e -> loadGame());
 
-        // จัดกลุ่มปุ่ม Save และ Load ให้อยู่ใน HBox และตั้งตำแหน่งให้อยู่ตรงกลางด้านล่าง
         HBox saveLoadBox = new HBox(10, saveButton, loadButton);
         saveLoadBox.setTranslateX(getSettings().getWidth() / 2 - 50);
         saveLoadBox.setTranslateY(getSettings().getHeight() - 50);
@@ -221,6 +253,14 @@ public class ZombieShooterGame extends GameApplication {
     // เมธอดสำหรับรับค่า Input จากคีย์บอร์ด (เคลื่อนที่, ยิง, คราฟ First Aid Kit)
     @Override
     protected void initInput() {
+        // ตรวจสอบว่า input ถูก initialize แล้วหรือยัง
+        if (inputInitialized) {
+            return;
+        }
+
+        // ล้าง input bindings เก่า
+        FXGL.getInput().clearAll();
+
         // เพิ่มการผูกปุ่ม Space สำหรับการยิง
         FXGL.onKeyDown(KeyCode.SPACE, () -> {
             if (player != null && player.getComponent(PlayerAmmo.class).getAmmo() > 0) {
@@ -300,36 +340,41 @@ public class ZombieShooterGame extends GameApplication {
                 }
             }
         }, KeyCode.S);
+
+        // ตั้งค่า input ว่าได้ถูก initialize แล้ว
+        inputInitialized = true;
     }
 
     // เมธอดสำหรับตั้งค่า Physics และการชนของ Entity ต่าง ๆ
     @Override
     protected void initPhysics() {
-        // เมื่อผู้เล่นชนกับ Magazine ให้เพิ่ม Ammo 5 นัด
+        // เมื่อผู้เล่นชนกับนิตยสารกระสุน ให้เพิ่มกระสุน
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.MAGAZINE) {
             @Override
             protected void onCollisionBegin(Entity player, Entity magazine) {
+                player.getComponent(PlayerAmmo.class).addAmmo(10);
                 magazine.removeFromWorld();
-                player.getComponent(PlayerAmmo.class).addAmmo(5);
             }
         });
 
-        // เมื่อผู้เล่นชนกับ Medical Supply ให้เพิ่มวัสดุสำหรับคราฟ
+        // เมื่อผู้เล่นชนกับวัสดุทางการแพทย์ ให้เพิ่มเลือด
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.MEDICAL_SUPPLY) {
             @Override
             protected void onCollisionBegin(Entity player, Entity supply) {
+                player.getComponent(PlayerHealth.class).heal(20);
                 supply.removeFromWorld();
-                player.getComponent(PlayerMedicalSupplies.class).addSupply(1);
             }
         });
 
-        // เมื่อกระสุนชนกับซอมบี้ ให้ลบทั้งกระสุนและซอมบี้ พร้อมเพิ่มค่า zombieKillCount
+        // เมื่อกระสุนชนกับซอมบี้ ให้ซอมบี้ตาย
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.BULLET, EntityType.ZOMBIE) {
             @Override
             protected void onCollisionBegin(Entity bullet, Entity zombie) {
                 bullet.removeFromWorld();
                 zombie.removeFromWorld();
                 zombieKillCount++;
+                highScoreDisplay.setText("Longest Survival: " + (int) longestSurvivalTime 
+                    + " sec\nMost Kills: " + mostZombieKills);
             }
         });
 
@@ -337,7 +382,9 @@ public class ZombieShooterGame extends GameApplication {
         getPhysicsWorld().addCollisionHandler(new CollisionHandler(EntityType.PLAYER, EntityType.ZOMBIE) {
             @Override
             protected void onCollisionBegin(Entity player, Entity zombie) {
+                System.out.println("Zombie hit player! Ending game...");
                 player.getComponent(PlayerHealth.class).takeDamage(10);
+                endGame(); // จบเกมทันทีเมื่อซอมบี้ชนกับผู้เล่น
             }
         });
     }
@@ -365,16 +412,11 @@ public class ZombieShooterGame extends GameApplication {
         double startX = player.getX() + player.getWidth() / 2;
         double startY = player.getY() + player.getHeight() / 2;
 
-        // สร้าง Entity ของกระสุน
-        Entity bullet = entityBuilder()
-                .at(startX, startY)
-                .type(EntityType.BULLET)
-                .viewWithBBox(new Circle(5, Color.YELLOW))
-                .with(new CollidableComponent(true))
-                .buildAndAttach();
-
-        // เพิ่มคอนโทรลสำหรับการเคลื่อนที่ของกระสุน
-        bullet.addComponent(new BulletControl(dirX, dirY, BULLET_SPEED));
+        // สร้าง Entity ของกระสุนโดยใช้ Factory
+        SpawnData data = new SpawnData(startX, startY);
+        data.put("dirX", dirX);
+        data.put("dirY", dirY);
+        FXGL.spawn("bullet", data);
 
         // กำหนดเวลาที่กระสุนสามารถยิงได้ครั้งต่อไป (Delay 1 วินาที)
         getGameTimer().runOnceAfter(() -> canShoot = true, Duration.seconds(1));
@@ -382,64 +424,97 @@ public class ZombieShooterGame extends GameApplication {
 
     // เมธอดสำหรับ spawn Magazine ในตำแหน่งสุ่มบนหน้าจอ
     private void spawnMagazine() {
-        entityBuilder()
-                .type(EntityType.MAGAZINE)
-                .at(random.nextInt(1280), random.nextInt(720))
-                .viewWithBBox(new Circle(15, 15, 15, Color.YELLOW))
-                .with(new CollidableComponent(true))
-                .buildAndAttach();
+        FXGL.spawn("magazine", random.nextInt(1280), random.nextInt(720));
     }
 
     // เมธอดสำหรับ spawn Medical Supply ในตำแหน่งสุ่มบนหน้าจอ
     private void spawnMedicalSupply() {
-        entityBuilder()
-                .type(EntityType.MEDICAL_SUPPLY)
-                .at(random.nextInt(1280), random.nextInt(720))
-                .viewWithBBox(new Circle(10, 10, 10, Color.LIGHTGREEN))
-                .with(new CollidableComponent(true))
-                .buildAndAttach();
+        FXGL.spawn("medical_supply", random.nextInt(1280), random.nextInt(720));
     }
 
-    // เมธอดสำหรับ spawn ซอมบี้ให้ออกนอกขอบจอ โดยใช้ view เป็น Circle (โปร่งใส) เพื่อให้ ZombieAnimationControl แทนที่ view เดิม
+    // เมธอดสำหรับ spawn ซอมบี้ให้ออกนอกขอบจอ
     private void spawnZombieOutsideScreen() {
+        System.out.println("Attempting to spawn " + zombieSpawnMultiplier + " zombies");
         for (int i = 0; i < zombieSpawnMultiplier; i++) {
-            int screenWidth = getSettings().getWidth();
-            int screenHeight = getSettings().getHeight();
-            double spawnX, spawnY;
-            // เลือกสุ่มด้านข้างของหน้าจอที่จะ spawn ซอมบี้
-            int edge = random.nextInt(4);
-            switch (edge) {
-                case 0:
-                    spawnX = -50;
-                    spawnY = random.nextDouble() * screenHeight;
-                    break;
-                case 1:
-                    spawnX = screenWidth + 50;
-                    spawnY = random.nextDouble() * screenHeight;
-                    break;
-                case 2:
-                    spawnX = random.nextDouble() * screenWidth;
-                    spawnY = -50;
-                    break;
-                default:
-                    spawnX = random.nextDouble() * screenWidth;
-                    spawnY = screenHeight + 50;
-                    break;
+            try {
+                // กำหนดขนาดแผนที่เป็น 800x800
+                double mapWidth = 800;
+                double mapHeight = 800;
+                double spawnX = 0;
+                double spawnY = 0;
+                boolean validPosition = false;
+                
+                // พยายามหาตำแหน่งที่ถูกต้องจนกว่าจะเจอ
+                while (!validPosition) {
+                    // เลือกสุ่มด้านข้างของแผนที่ที่จะ spawn ซอมบี้
+                    int edge = random.nextInt(4);
+                    switch (edge) {
+                        case 0: // ซ้าย
+                            spawnX = 50; // เริ่มจากขอบซ้ายของแผนที่
+                            spawnY = random.nextDouble() * (mapHeight - 100) + 50; // อยู่ระหว่าง 50 ถึง 750
+                            break;
+                        case 1: // ขวา
+                            spawnX = mapWidth - 50; // เริ่มจากขอบขวาของแผนที่
+                            spawnY = random.nextDouble() * (mapHeight - 100) + 50;
+                            break;
+                        case 2: // บน
+                            spawnX = random.nextDouble() * (mapWidth - 100) + 50; // อยู่ระหว่าง 50 ถึง 750
+                            spawnY = 50; // เริ่มจากขอบบนของแผนที่
+                            break;
+                        default: // ล่าง
+                            spawnX = random.nextDouble() * (mapWidth - 100) + 50;
+                            spawnY = mapHeight - 50; // เริ่มจากขอบล่างของแผนที่
+                            break;
+                    }
+
+                    // ตรวจสอบระยะห่างจากผู้เล่น
+                    if (player != null) {
+                        double playerX = player.getX();
+                        double playerY = player.getY();
+                        double distance = Math.sqrt(
+                            Math.pow(spawnX - playerX, 2) + 
+                            Math.pow(spawnY - playerY, 2)
+                        );
+                        
+                        // ถ้าอยู่ใกล้ผู้เล่นเกินไป ให้เลื่อนตำแหน่งออกไป
+                        if (distance < 200) {
+                            double angle = Math.atan2(spawnY - playerY, spawnX - playerX);
+                            spawnX = playerX + Math.cos(angle) * 200;
+                            spawnY = playerY + Math.sin(angle) * 200;
+                            
+                            // ตรวจสอบว่าตำแหน่งใหม่ยังอยู่ในขอบเขตแผนที่
+                            spawnX = Math.max(50, Math.min(mapWidth - 50, spawnX));
+                            spawnY = Math.max(50, Math.min(mapHeight - 50, spawnY));
+                        }
+                    }
+
+                    // ตรวจสอบว่าตำแหน่งที่จะ spawn ไม่อยู่ในกำแพง
+                    validPosition = true;
+                    for (Entity barrier : getGameWorld().getEntitiesByType(EntityType.BARRIER)) {
+                        if (spawnX < barrier.getRightX() && 
+                            spawnX + 40 > barrier.getX() && 
+                            spawnY < barrier.getBottomY() && 
+                            spawnY + 40 > barrier.getY()) {
+                            validPosition = false;
+                            break;
+                        }
+                    }
+                }
+        
+                // สร้าง Entity ของซอมบี้โดยใช้ Factory
+                SpawnData data = new SpawnData(spawnX, spawnY);
+                Entity zombie = FXGL.spawn("zombie", data);
+                if (zombie != null) {
+                    // เริ่มติดตามการเคลื่อนที่ของซอมบี้ไปยังผู้เล่น
+                    trackZombieMovement(zombie);
+                    System.out.println("Successfully spawned zombie " + (i + 1) + " at: " + spawnX + ", " + spawnY);
+                } else {
+                    System.err.println("Failed to spawn zombie " + (i + 1));
+                }
+            } catch (Exception e) {
+                System.err.println("Error spawning zombie " + (i + 1) + ": " + e.getMessage());
+                e.printStackTrace();
             }
-    
-            // สร้าง Entity ของซอมบี้
-            Entity zombie = entityBuilder()
-                    .at(spawnX, spawnY)
-                    .type(EntityType.ZOMBIE)
-                    .bbox(new HitBox(BoundingShape.box(32, 32))) // กำหนดขนาด hitbox ให้ตรงกับ sprite
-                    .with(new CollidableComponent(true))
-                    .with(new ZombieAnimationComponent()) // เพิ่ม Animation Component
-                    .buildAndAttach();
-    
-            // เพิ่มคอนโทรลสำหรับการโจมตีของซอมบี้
-            zombie.addComponent(new ZombieAttackControl());
-            // เริ่มติดตามการเคลื่อนที่ของซอมบี้ไปยังผู้เล่น
-            trackZombieMovement(zombie);
         }
     }
     
@@ -447,14 +522,11 @@ public class ZombieShooterGame extends GameApplication {
     // เมธอดสำหรับติดตามการเคลื่อนที่ของซอมบี้ให้ตามผู้เล่น
     private void trackZombieMovement(Entity zombie) {
         run(() -> {
-            if (player != null) {
+            if (player != null && zombie.isActive()) {
                 Point2D playerCenter = new Point2D(
                     player.getX() + player.getWidth() / 2,
                     player.getY() + player.getHeight() / 2
                 );
-                
-                // อัปเดตแอนิเมชันตามการเคลื่อนที่
-                //zombie.getComponent(ZombieAnimationComponent.class).moveTowards(playerCenter);
                 
                 // คำนวณทิศทางและระยะทาง
                 double dx = playerCenter.getX() - (zombie.getX() + zombie.getWidth() / 2);
@@ -462,11 +534,49 @@ public class ZombieShooterGame extends GameApplication {
                 double distance = Math.sqrt(dx * dx + dy * dy);
                 
                 if (distance > 1) {
-                    zombie.translateX(dx / distance * ZOMBIE_SPEED);
-                    zombie.translateY(dy / distance * ZOMBIE_SPEED);
+                    // เพิ่มความเร็วของซอมบี้
+                    double speed = ZOMBIE_SPEED;
+                    // คำนวณตำแหน่งใหม่
+                    double newX = zombie.getX() + (dx / distance * speed);
+                    double newY = zombie.getY() + (dy / distance * speed);
+                    
+                    // ตรวจสอบขอบเขตของแผนที่ (800x800)
+                    if (newX >= 0 && newX <= 800 - zombie.getWidth()) {
+                        // ตรวจสอบการชนกับ barrier
+                        boolean canMoveX = true;
+                        for (Entity barrier : getGameWorld().getEntitiesByType(EntityType.BARRIER)) {
+                            if (newX < barrier.getRightX() && 
+                                newX + zombie.getWidth() > barrier.getX() && 
+                                zombie.getY() < barrier.getBottomY() && 
+                                zombie.getY() + zombie.getHeight() > barrier.getY()) {
+                                canMoveX = false;
+                                break;
+                            }
+                        }
+                        if (canMoveX) {
+                            zombie.setX(newX);
+                        }
+                    }
+                    
+                    if (newY >= 0 && newY <= 800 - zombie.getHeight()) {
+                        // ตรวจสอบการชนกับ barrier
+                        boolean canMoveY = true;
+                        for (Entity barrier : getGameWorld().getEntitiesByType(EntityType.BARRIER)) {
+                            if (zombie.getX() < barrier.getRightX() && 
+                                zombie.getX() + zombie.getWidth() > barrier.getX() && 
+                                newY < barrier.getBottomY() && 
+                                newY + zombie.getHeight() > barrier.getY()) {
+                                canMoveY = false;
+                                break;
+                            }
+                        }
+                        if (canMoveY) {
+                            zombie.setY(newY);
+                        }
+                    }
                 }
             }
-        }, Duration.seconds(1.0 / 60)); // เพิ่ม frame rate เป็น 60 FPS สำหรับแอนิเมชันที่ลื่นไหล
+        }, Duration.seconds(1.0 / 60));
     }
 
     // เมธอดสำหรับเซฟสถานะเกมไปที่ไฟล์ "savegame.txt"

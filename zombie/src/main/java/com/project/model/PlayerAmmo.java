@@ -12,6 +12,8 @@ public class PlayerAmmo extends Component {
     private Text ammoDisplay;
     // จำนวนกระสุนสูงสุดที่ผู้เล่นสามารถเก็บได้
     private static final int MAX_AMMO = 10; // จำนวนกระสุนสูงสุดที่สามารถเก็บได้
+    private double fireRate = 1.0; // ค่าเริ่มต้นของ delay ระหว่างการยิง
+    private double damageMultiplier = 1.0; // ค่าเริ่มต้นของตัวคูณความเสียหาย
 
     /**
      * Constructor สำหรับสร้าง PlayerAmmo พร้อมกำหนดกระสุนเริ่มต้น
@@ -87,5 +89,37 @@ public class PlayerAmmo extends Component {
     public void setAmmo(int ammo) {
         this.ammo = ammo;
         updateAmmoDisplay();
+    }
+
+    /**
+     * เมธอดสำหรับตั้งค่า delay ระหว่างการยิง
+     * @param rate ค่า delay ใหม่ (วินาที)
+     */
+    public void setFireRate(double rate) {
+        this.fireRate = rate;
+    }
+
+    /**
+     * เมธอดสำหรับตั้งค่าตัวคูณความเสียหาย
+     * @param multiplier ค่าตัวคูณความเสียหายใหม่
+     */
+    public void setDamageMultiplier(double multiplier) {
+        this.damageMultiplier = multiplier;
+    }
+
+    /**
+     * เมธอดสำหรับดึงค่าตัวคูณความเสียหายปัจจุบัน
+     * @return ค่าตัวคูณความเสียหาย
+     */
+    public double getDamageMultiplier() {
+        return damageMultiplier;
+    }
+
+    /**
+     * เมธอดสำหรับดึงค่า delay ระหว่างการยิงปัจจุบัน
+     * @return ค่า delay ระหว่างการยิง
+     */
+    public double getFireRate() {
+        return fireRate;
     }
 }

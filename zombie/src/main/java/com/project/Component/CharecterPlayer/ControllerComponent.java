@@ -19,14 +19,18 @@ import javafx.util.Duration;
 public class ControllerComponent extends Component{
 
     private PhysicsComponent physics;
-    private double velocityX ;
-    private double velocityY ;
+    private double velocityX;
+    private double velocityY;
     private AnimationComponent animation;
+    private double speedMultiplier = 1.0; // ค่าเริ่มต้นของตัวคูณความเร็ว
 
-  
-    
-    
-    
+    /**
+     * เมธอดสำหรับตั้งค่าตัวคูณความเร็ว
+     * @param multiplier ค่าตัวคูณความเร็วใหม่
+     */
+    public void setSpeedMultiplier(double multiplier) {
+        this.speedMultiplier = multiplier;
+    }
 
     @Override
     public void onUpdate(double tpf) {
@@ -49,32 +53,25 @@ public class ControllerComponent extends Component{
     }
 
     public void moveLeft() {
-
-        velocityX = -75;
+        velocityX = -75 * speedMultiplier;
         entity.setScaleX(1);
-       
         animation.walkLeft();
-       
-
     }
 
     public void moveRight() {
-
-        velocityX = 75;
+        velocityX = 75 * speedMultiplier;
         entity.setScaleX(1);
         animation.walkRight();
     }
 
     public void moveUp() {
-
-        velocityY = -75;
+        velocityY = -75 * speedMultiplier;
         entity.setScaleX(1);
         animation.walkUp();
     }
 
     public void moveDown() {
-
-        velocityY = 75;
+        velocityY = 75 * speedMultiplier;
         entity.setScaleX(1);
         animation.walkDown();
     }

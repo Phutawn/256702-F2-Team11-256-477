@@ -21,8 +21,8 @@ public class ZombieAnimationControl extends Component {
         lastY = entity.getY();
         
         // สร้าง AnimationChannel สำหรับ idle และ run
-        idleChannel = new AnimationChannel(FXGL.image("Zombie_Idle.png"), 4, 40, 40, Duration.seconds(1), 0, 3);
-        runChannel = new AnimationChannel(FXGL.image("Zombie_run.png"), 4, 40, 40, Duration.seconds(0.8), 0, 3);
+        idleChannel = new AnimationChannel(FXGL.image("Zombie.png"), 4, 40, 40, Duration.seconds(1), 0, 3);
+        runChannel = new AnimationChannel(FXGL.image("Zombie.png"), 4, 40, 40, Duration.seconds(0.8), 0, 3);
         
         // สร้าง AnimatedTexture โดยเริ่มต้นด้วย idleChannel
         texture = new AnimatedTexture(idleChannel);
