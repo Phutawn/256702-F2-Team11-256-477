@@ -8,11 +8,19 @@ import com.almasb.fxgl.entity.Entity;
 import com.almasb.fxgl.entity.components.CollidableComponent;
 import com.almasb.fxgl.entity.level.Level;
 import com.almasb.fxgl.entity.level.tiled.TMXLevelLoader;
+import com.almasb.fxgl.input.UserAction;
 import com.almasb.fxgl.physics.CollisionHandler;
+import com.almasb.fxgl.physics.HitBox;
+import com.almasb.fxgl.physics.BoundingShape;
+import com.project.Component.CharecterHero.ControllerComponent;
+import com.project.Factory.BackgroundFactory;
+import com.project.Factory.CharacterFactory;
+import com.project.Type.Player.PlayerType;
 import com.project.View.UIManager;
 import com.project.model.PlayerAmmo;
 import com.project.model.PlayerHealth;
 import com.project.model.PlayerMedicalSupplies;
+import com.project.model.ZombieAnimationComponent;
 import javafx.scene.control.Button;
 import javafx.scene.layout.HBox;
 import javafx.scene.input.KeyCode;
@@ -29,6 +37,7 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.Random;
 import static com.almasb.fxgl.dsl.FXGL.*;
+import javafx.geometry.Point2D;
 
 public class ZombieShooterGame extends GameApplication {
 
@@ -113,31 +122,40 @@ public class ZombieShooterGame extends GameApplication {
     protected void initGameVars(Map<String, Object> vars) {
         vars.put("map1", "scene1.tmx");
         vars.put("map2", "scene2.tmx");
+
+        vars.put("Phase", true);
+
+        
     }
 
     // เมธอดสำหรับเริ่มต้นและตั้งค่าองค์ประกอบหลักของเกม
     public void startGame() {
-        // เพิ่มบรรทัดนี้เพื่อให้แน่ใจว่า ZombieAnimationInjector ถูกโหลด
-        try {
-            Class.forName("com.project.model.ZombieAnimationInjector");
-        } catch (ClassNotFoundException e) {
-            e.printStackTrace();
-        }
-
         // ตั้งค่าสีพื้นหลังและล้าง UI nodes เดิม
-        getGameScene().setBackgroundColor(Color.WHITE);
+        getGameScene().setBackgroundColor(Color.BLACK);
         getGameScene().clearUINodes();
 
-        // ลงทะเบียน BackgroundFactory
-        //FXGL.getGameWorld().addEntityFactory(new BackgroundFactory());
-
-        // คอมเมนต์การโหลดแผนที่ .tmx หากต้องการรันด้วยพื้นหลังสีดำ
-        /*
+        
+        FXGL.getGameWorld().addEntityFactory(new BackgroundFactory());
+        FXGL.getGameWorld().addEntityFactory(new CharacterFactory());
+       
+        
         String[] maps = {"scene1.tmx", "scene2.tmx"};
         String selectedMap = maps[random.nextInt(maps.length)];
         map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
         FXGL.setLevelFromMap(selectedMap);
-        */
+
+        player = FXGL.getGameWorld().getEntitiesByType(PlayerType.Hero).get(0);
+        
+        FXGL.getGameScene().getViewport().bindToEntity(player,FXGL.getAppWidth()/2, FXGL.getAppHeight()/2);
+        FXGL.getGameScene().getViewport().setZoom(2.8);
+        int mapWidth = (int) map.getWidth() * 32;
+        int mapHeight = (int) map.getHeight() * 32;
+
+        FXGL.getGameScene().getViewport().setBounds(0, 0, mapWidth, mapHeight);
+        FXGL.getGameScene().getViewport().setLazy(true);
+        
+       
+        
 
         // ตั้งค่า UI สำหรับ Timer และ High Score
         timerDisplay = new Text("Time: 0");
@@ -160,7 +178,7 @@ public class ZombieShooterGame extends GameApplication {
         zombieSpawnMultiplier = 1;
 
         // สร้าง Entity ของผู้เล่น
-        player = entityBuilder()
+        /*player = entityBuilder()
                 .at(400, 300)
                 .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
                 .with(new PlayerHealth())
@@ -174,18 +192,13 @@ public class ZombieShooterGame extends GameApplication {
         Text playerNameText = new Text(playerName);
         playerNameText.setStyle("-fx-font-size: 18px; -fx-fill: white;");
         playerNameText.setTranslateY(-20);
-        player.getViewComponent().addChild(playerNameText);
+        player.getViewComponent().addChild(playerNameText);*/
 
-        // ตั้งค่ากล้องให้ติดตามตัวละคร
-        FXGL.getGameScene().getViewport().bindToEntity(player, getSettings().getWidth() / 2.0, getSettings().getHeight() / 2.0);
-
-        // ซูมกล้องเข้าไปที่ตัวละคร
-        FXGL.getGameScene().getViewport().setZoom(1); // ค่า 2.5 คือระดับการซูม (ปรับได้ตามต้องการ)
-
+        
         // เริ่ม spawn ซอมบี้ครั้งแรก
         spawnZombieOutsideScreen();
         // เริ่มต้นรับค่า Input จากผู้เล่น
-        initInput();
+        
 
         // ตั้งเวลาให้ทุก 10 วินาที spawn ซอมบี้เพิ่มจำนวนตาม zombieSpawnMultiplier 
         FXGL.getGameTimer().runAtInterval(() -> {
@@ -227,45 +240,88 @@ public class ZombieShooterGame extends GameApplication {
     // เมธอดสำหรับรับค่า Input จากคีย์บอร์ด (เคลื่อนที่, ยิง, คราฟ First Aid Kit)
     @Override
     protected void initInput() {
-        // ตรวจสอบว่า Input ได้ถูกกำหนดไว้แล้วหรือไม่
-        if (inputInitialized)
-            return;
-        inputInitialized = true;
 
-        // กำหนดการเคลื่อนที่ของผู้เล่นด้วยคีย์ A, D, W, S
-        onKey(KeyCode.A, "Move Left", () -> {
-            lastDirX = -1;
-            lastDirY = 0;
-            player.translateX(-SPEED);
-        });
-        onKey(KeyCode.D, "Move Right", () -> {
-            lastDirX = 1;
-            lastDirY = 0;
-            player.translateX(SPEED);
-        });
-        onKey(KeyCode.W, "Move Up", () -> {
-            lastDirX = 0;
-            lastDirY = -1;
-            player.translateY(-SPEED);
-        });
-        onKey(KeyCode.S, "Move Down", () -> {
-            lastDirX = 0;
-            lastDirY = 1;
-            player.translateY(SPEED);
-        });
-
-        // กำหนดการยิงกระสุน เมื่อกด SPACE
-        onKeyDown(KeyCode.SPACE, "Shoot Bullet", this::shootBullet);
-
-        // กำหนดการคราฟ First Aid Kit เมื่อกด H (ถ้ามีวัสดุเพียงพอ)
-        onKeyDown(KeyCode.H, "Craft First Aid Kit", () -> {
-            boolean crafted = player.getComponent(PlayerMedicalSupplies.class).useSuppliesForFirstAid();
-            if (crafted) {
-                player.getComponent(PlayerHealth.class).heal(10);
-            } else {
-                FXGL.showMessage("ไม่พบวัสดุสำหรับคราฟชุดประถมพยาบาลเพียงพอ!");
+       
+        FXGL.getInput().addAction(new UserAction("Right") {
+        @Override
+        protected void onAction() {
+            if (FXGL.getb("Phase") == true){
+            player.getComponent(ControllerComponent.class).moveRight();
             }
-        });
+        }
+
+        @Override
+        protected void onActionEnd() {
+            if (FXGL.getb("Phase") == true){
+            player.getComponent(ControllerComponent.class).stop();
+            }
+        }
+        }, KeyCode.D);
+
+        FXGL.getInput().addAction(new UserAction("Left") {
+        @Override
+        protected void onAction() {
+            if(FXGL.getb("Phase") == true){
+                player.getComponent(ControllerComponent.class).moveLeft();
+             }
+            }
+
+        @Override
+        protected void onActionEnd() {
+            if(FXGL.getb("Phase") == true){
+            player.getComponent(ControllerComponent.class).stop();
+            }
+        }
+        }, KeyCode.A);
+
+        FXGL.getInput().addAction(new UserAction("Up") {
+        @Override
+        protected void onAction() {
+            if(FXGL.getb("Phase") == true){
+                player.getComponent(ControllerComponent.class).moveUp();
+              }
+            }
+
+        @Override
+        protected void onActionEnd() {
+            if(FXGL.getb("Phase") == true){
+                player.getComponent(ControllerComponent.class).stop();
+                }
+            }
+        }, KeyCode.W);
+
+        FXGL.getInput().addAction(new UserAction("Down") {
+            @Override
+            protected void onAction() {
+                if(FXGL.getb("Phase") == true){
+                player.getComponent(ControllerComponent.class).moveDown();
+                }
+            }
+
+            @Override
+            protected void onActionEnd() {
+                if(FXGL.getb("Phase") == true){
+                player.getComponent(ControllerComponent.class).stop();
+                }
+            }
+        }, KeyCode.S);
+
+        FXGL.getInput().addAction(new UserAction("Shoot") {
+            @Override
+            protected void onActionBegin() {
+                if (FXGL.getb("Phase") == true){
+                shootBullet();
+                }
+            }
+        }, KeyCode.SPACE);
+
+            
+
+        
+        
+        
+
+        
     }
 
     // เมธอดสำหรับตั้งค่า Physics และการชนของ Entity ต่าง ๆ
@@ -393,12 +449,13 @@ public class ZombieShooterGame extends GameApplication {
                     break;
             }
     
-            // สร้าง Entity ของซอมบี้โดยใช้ view แบบโปร่งใสเพื่อให้ ZombieAnimationControl แทรก sprite ที่ต้องการ
+            // สร้าง Entity ของซอมบี้
             Entity zombie = entityBuilder()
                     .at(spawnX, spawnY)
                     .type(EntityType.ZOMBIE)
-                    .viewWithBBox(new Circle(20, Color.TRANSPARENT))
+                    .bbox(new HitBox(BoundingShape.box(32, 32))) // กำหนดขนาด hitbox ให้ตรงกับ sprite
                     .with(new CollidableComponent(true))
+                    .with(new ZombieAnimationComponent()) // เพิ่ม Animation Component
                     .buildAndAttach();
     
             // เพิ่มคอนโทรลสำหรับการโจมตีของซอมบี้
@@ -413,15 +470,25 @@ public class ZombieShooterGame extends GameApplication {
     private void trackZombieMovement(Entity zombie) {
         run(() -> {
             if (player != null) {
-                double dx = (player.getX() + player.getWidth() / 2) - (zombie.getX() + zombie.getWidth() / 2);
-                double dy = (player.getY() + player.getHeight() / 2) - (zombie.getY() + zombie.getHeight() / 2);
+                Point2D playerCenter = new Point2D(
+                    player.getX() + player.getWidth() / 2,
+                    player.getY() + player.getHeight() / 2
+                );
+                
+                // อัปเดตแอนิเมชันตามการเคลื่อนที่
+                //zombie.getComponent(ZombieAnimationComponent.class).moveTowards(playerCenter);
+                
+                // คำนวณทิศทางและระยะทาง
+                double dx = playerCenter.getX() - (zombie.getX() + zombie.getWidth() / 2);
+                double dy = playerCenter.getY() - (zombie.getY() + zombie.getHeight() / 2);
                 double distance = Math.sqrt(dx * dx + dy * dy);
+                
                 if (distance > 1) {
                     zombie.translateX(dx / distance * ZOMBIE_SPEED);
                     zombie.translateY(dy / distance * ZOMBIE_SPEED);
                 }
             }
-        }, Duration.seconds(1.0 / 30));
+        }, Duration.seconds(1.0 / 60)); // เพิ่ม frame rate เป็น 60 FPS สำหรับแอนิเมชันที่ลื่นไหล
     }
 
     // เมธอดสำหรับเซฟสถานะเกมไปที่ไฟล์ "savegame.txt"
