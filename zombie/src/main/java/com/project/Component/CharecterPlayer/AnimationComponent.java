@@ -1,4 +1,4 @@
-package com.project.Component.CharecterHero;
+package com.project.Component.CharecterPlayer;
 
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.SpawnData;
@@ -17,43 +17,29 @@ public class AnimationComponent extends Component {
     private final AnimatedTexture texture;
     private final AnimationChannel left;
     private final AnimationChannel right;
-    private final AnimationChannel up;
-    private final AnimationChannel down;
-    private final AnimationChannel idleDown;
-    private final AnimationChannel idleRight;
-    private final AnimationChannel idleUp;
     private final AnimationChannel idleLeft;
+    private final AnimationChannel idleRight;
 
-
-
-    public AnimationComponent (String nameFile) {
-
-       
-
+    public AnimationComponent(String nameFile) {
         Image image = FXGL.image(nameFile);
 
+        int columns = 6;
+        int rows = 4;
 
-        int columns = 6;   
-        int rows = 4;     
-
-        int frameW = (int) image.getWidth() / columns;
-        int frameH = (int) image.getHeight() / rows;
-
+        int frameW = (int) image.getWidth() / columns; // 192 / 6 = 32
+        int frameH = (int) image.getHeight() / rows;  // 128 / 4 = 32
 
         left = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 12, 17);
         right = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 18, 23);
-        up = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 9, 11);
-        down = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 0, 2);
-        idleDown = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 1, 1);
-        idleUp = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 10, 10);
-        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 6, 11);
         idleLeft = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 0, 5);
+        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 6, 11);
 
+        texture = new AnimatedTexture(idleLeft);
+        texture.loopAnimationChannel(idleLeft);
 
-        texture = new AnimatedTexture(idleDown);
-        texture.loopAnimationChannel(idleDown);
-        
-    
+        // ปรับตำแหน่งของภาพให้อยู่ตรงกลาง Hitbox
+        texture.setTranslateX(-6);
+        texture.setTranslateY(-3.5); // Offset Y
     }
 
     public AnimatedTexture getTexture() {
@@ -115,10 +101,10 @@ public class AnimationComponent extends Component {
     }
 
     public void idleDown() {
-        texture.loopAnimationChannel(idleDown);
+        texture.loopAnimationChannel(idleLeft);
     }
     public void idleUp() {
-        texture.loopAnimationChannel(idleUp);
+        texture.loopAnimationChannel(idleRight);
     }
 
     public void idleRight() {

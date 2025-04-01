@@ -32,6 +32,9 @@
 18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18
 </data>
  </layer>
+ <objectgroup id="6" name="spawn point" class="spawn point">
+  <object id="82" type="spawn point" x="644" y="165" width="21.5" height="25"/>
+ </objectgroup>
  <layer id="4" name="wall" width="25" height="25">
   <data encoding="csv">
 22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,21,
@@ -131,8 +134,5 @@
   <object id="59" type="barrier" x="30.6667" y="351.333" width="34" height="61.3333"/>
   <object id="60" type="barrier" x="95.3333" y="368.667" width="29.3333" height="30.6667"/>
   <object id="61" type="barrier" x="126.667" y="320.667" width="32" height="56"/>
- </objectgroup>
- <objectgroup id="6" name="spawn point" class="spawn point">
-  <object id="82" type="spawn point" x="644" y="165" width="21.5" height="25"/>
  </objectgroup>
 </map>

@@ -2,9 +2,9 @@ package com.project.Factory;
 
 import static com.almasb.fxgl.dsl.FXGL.texture;
 
-import com.project.Component.CharecterHero.AnimationComponent;
-import com.project.Component.CharecterHero.ControllerComponent;
 import com.project.Component.StatusComponent;
+import com.project.Component.CharecterPlayer.AnimationComponent;
+import com.project.Component.CharecterPlayer.ControllerComponent;
 import com.project.Type.SceneType;
 //import com.Type.Enemy.EnemyType;
 import com.project.Type.Player.PlayerType;
@@ -36,8 +36,8 @@ public class CharacterFactory implements EntityFactory {
         
         // สร้าง Entity หลัก
         Entity player = FXGL.entityBuilder(data)
-                .type(PlayerType.Hero)
-                .bbox(new HitBox(BoundingShape.box(40, 50)))           
+                .type(PlayerType.PLAYER)
+                .bbox(new HitBox(BoundingShape.box(20, 28)))           
                 .with(physics)
                 .with(new CollidableComponent(true))
                 .with(new ControllerComponent())

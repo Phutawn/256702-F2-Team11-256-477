@@ -12,7 +12,7 @@ import com.almasb.fxgl.input.UserAction;
 import com.almasb.fxgl.physics.CollisionHandler;
 import com.almasb.fxgl.physics.HitBox;
 import com.almasb.fxgl.physics.BoundingShape;
-import com.project.Component.CharecterHero.ControllerComponent;
+import com.project.Component.CharecterPlayer.ControllerComponent;
 import com.project.Factory.BackgroundFactory;
 import com.project.Factory.CharacterFactory;
 import com.project.Type.Player.PlayerType;
@@ -48,7 +48,6 @@ public class ZombieShooterGame extends GameApplication {
 
     // ตัวแปรสำหรับเก็บข้อมูลผู้เล่นและค่าคงที่ต่าง ๆ
     private Entity player;
-    private static final double SPEED = 1;
     private static final double BULLET_SPEED = 600;
     private static final double ZOMBIE_SPEED = 2;
     private boolean inputInitialized = false;
@@ -144,7 +143,7 @@ public class ZombieShooterGame extends GameApplication {
         map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
         FXGL.setLevelFromMap(selectedMap);
 
-        player = FXGL.getGameWorld().getEntitiesByType(PlayerType.Hero).get(0);
+        player = FXGL.getGameWorld().getEntitiesByType(PlayerType.PLAYER).get(0);
         
         FXGL.getGameScene().getViewport().bindToEntity(player,FXGL.getAppWidth()/2, FXGL.getAppHeight()/2);
         FXGL.getGameScene().getViewport().setZoom(2.8);
@@ -176,25 +175,7 @@ public class ZombieShooterGame extends GameApplication {
         currentSurvivalTime = 0;
         zombieKillCount = 0;
         zombieSpawnMultiplier = 1;
-
-        // สร้าง Entity ของผู้เล่น
-        /*player = entityBuilder()
-                .at(400, 300)
-                .viewWithBBox(new Rectangle(40, 40, Color.BLUE))
-                .with(new PlayerHealth())
-                .with(new PlayerAmmo(10))
-                .with(new PlayerMedicalSupplies())
-                .with(new CollidableComponent(true))
-                .type(EntityType.PLAYER)
-                .buildAndAttach();
-
-        // เพิ่มชื่อผู้เล่นให้แสดงบนหัวของผู้เล่น
-        Text playerNameText = new Text(playerName);
-        playerNameText.setStyle("-fx-font-size: 18px; -fx-fill: white;");
-        playerNameText.setTranslateY(-20);
-        player.getViewComponent().addChild(playerNameText);*/
-
-        
+       
         // เริ่ม spawn ซอมบี้ครั้งแรก
         spawnZombieOutsideScreen();
         // เริ่มต้นรับค่า Input จากผู้เล่น

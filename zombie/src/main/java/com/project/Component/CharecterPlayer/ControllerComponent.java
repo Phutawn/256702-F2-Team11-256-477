@@ -1,4 +1,4 @@
-package com.project.Component.CharecterHero;
+package com.project.Component.CharecterPlayer;
 
 
 import static com.almasb.fxgl.dsl.FXGL.image;
@@ -50,7 +50,7 @@ public class ControllerComponent extends Component{
 
     public void moveLeft() {
 
-        velocityX = -100;
+        velocityX = -75;
         entity.setScaleX(1);
        
         animation.walkLeft();
@@ -60,21 +60,21 @@ public class ControllerComponent extends Component{
 
     public void moveRight() {
 
-        velocityX = 100;
+        velocityX = 75;
         entity.setScaleX(1);
         animation.walkRight();
     }
 
     public void moveUp() {
 
-        velocityY = -100;
+        velocityY = -75;
         entity.setScaleX(1);
         animation.walkUp();
     }
 
     public void moveDown() {
 
-        velocityY = 100;
+        velocityY = 75;
         entity.setScaleX(1);
         animation.walkDown();
     }
