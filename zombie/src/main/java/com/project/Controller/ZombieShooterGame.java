@@ -122,7 +122,7 @@ public class ZombieShooterGame extends GameApplication {
         settings.setCloseConfirmation(true);
         settings.setMainMenuEnabled(true);
         settings.setFullScreenAllowed(true);
-        settings.setFullScreenFromStart(false);
+        settings.setFullScreenFromStart(true);
     }
 
     // เมธอดสำหรับเริ่มต้นเกมและการโหลด high score จากไฟล์
@@ -196,14 +196,10 @@ public class ZombieShooterGame extends GameApplication {
         String selectedMap = maps[random.nextInt(maps.length)];
         System.out.println("Loading map: " + selectedMap);
         
-        try {
+        
             map = FXGL.getAssetLoader().loadLevel(selectedMap, new TMXLevelLoader());
             FXGL.setLevelFromMap(selectedMap);
             System.out.println("Map loaded successfully. Width: " + map.getWidth() + ", Height: " + map.getHeight());
-        } catch (Exception e) {
-            System.err.println("Error loading map: " + e.getMessage());
-            e.printStackTrace();
-        }
 
         // ตั้งค่าแรงโน้มถ่วงของโลกฟิสิกส์เป็น 0
         getPhysicsWorld().setGravity(0, 0);
@@ -295,7 +291,7 @@ public class ZombieShooterGame extends GameApplication {
         waveDisplay = new Text("Wave: 1");
         waveDisplay.setStyle("-fx-font-size: 24px; -fx-fill: yellow;");
         waveDisplay.setTranslateX(getSettings().getWidth() / 2 - 50);
-        waveDisplay.setTranslateY(40);
+        waveDisplay.setTranslateY(70);
         getGameScene().addUINode(waveDisplay);
     }
     
@@ -319,20 +315,20 @@ public class ZombieShooterGame extends GameApplication {
             startNewWave();
         }, Duration.seconds(2));
 
-        // ตั้งเวลา spawn กระสุนทุก 10 วินาที
+        // ตั้งเวลา spawn กระสุนทุก 7 วินาที
         FXGL.getGameTimer().runAtInterval(() -> {
             spawnMagazine();
         }, Duration.seconds(7));
 
-        // ตั้งเวลา spawn ยาทุก 15 วินาที
+        // ตั้งเวลา spawn ยาทุก 7 วินาที
         FXGL.getGameTimer().runAtInterval(() -> {
             spawnMedicalSupply();
         }, Duration.seconds(7));
 
-        // ตั้งเวลา spawn กล่องยาทุก 30 วินาที
+        // ตั้งเวลา spawn กล่องยาทุก 10 วินาที
         FXGL.getGameTimer().runAtInterval(() -> {
             spawnMedicalKit();
-        }, Duration.seconds(30));
+        }, Duration.seconds(10));
     }
 
     private void startTimerSystem() {

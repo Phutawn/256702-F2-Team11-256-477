@@ -20,10 +20,10 @@ public class PlayerMedicalSupplies extends Component {
         // สร้าง Text node สำหรับแสดงผลวัสดุ
         suppliesDisplay = new Text();
         // กำหนดรูปแบบของข้อความ (ขนาดและสี)
-        suppliesDisplay.setStyle("-fx-font-size: 20px; -fx-fill: green;");
+        suppliesDisplay.setStyle("-fx-font-size: 20px; -fx-fill: white;");
         // กำหนดตำแหน่งที่จะแสดงบนหน้าจอ
         suppliesDisplay.setTranslateX(10);
-        suppliesDisplay.setTranslateY(70);
+        suppliesDisplay.setTranslateY(120);
         // อัปเดตข้อความให้ตรงกับจำนวนวัสดุปัจจุบัน
         updateDisplay();
         // เพิ่ม Text node ลงใน UI ของเกม
