@@ -263,43 +263,46 @@ public class ZombieShooterGame extends GameApplication {
     }
 
     private void setupUI() {
+        // ตัวนับเวลา
         timerDisplay = new Text("Time: 0");
         timerDisplay.setStyle("-fx-font-size: 20px; -fx-fill: white;");
         timerDisplay.setTranslateX(10);
         timerDisplay.setTranslateY(100);
         getGameScene().addUINode(timerDisplay);
-
+    
+        // แสดงคะแนนสูงสุด
         highScoreDisplay = new Text("Longest Survival: " + (int) longestSurvivalTime 
                 + " sec\nMost Kills: " + mostZombieKills);
         highScoreDisplay.setStyle("-fx-font-size: 20px; -fx-fill: gold;");
         highScoreDisplay.setTranslateX(getSettings().getWidth() - 250);
         highScoreDisplay.setTranslateY(40);
         getGameScene().addUINode(highScoreDisplay);
-
-        // สร้างแถบเลือด
-        healthBarBackground = new Rectangle(200, 20, Color.RED);
-        healthBarBackground.setTranslateX(10);
-        healthBarBackground.setTranslateY(40);
-        getGameScene().addUINode(healthBarBackground);
-
-        healthBar = new Rectangle(200, 20, Color.GREEN);
-        healthBar.setTranslateX(10);
-        healthBar.setTranslateY(40);
-        getGameScene().addUINode(healthBar);
-
-        healthText = new Text("HP: 100/100");
-        healthText.setStyle("-fx-font-size: 16px; -fx-fill: white;");
-        healthText.setTranslateX(10);
-        healthText.setTranslateY(35);
-        getGameScene().addUINode(healthText);
-
-        // เพิ่มการแสดงผล wave
+    
+        // ไม่สร้างแถบเลือดสีเขียว (เอาออกเพราะมีหลอดเลือดอีกอันอยู่แล้ว)
+        // healthBar = new Rectangle(200, 20, Color.GREEN);
+        // healthBar.setTranslateX(10);
+        // healthBar.setTranslateY(40);
+        // getGameScene().addUINode(healthBar);
+    
+        // ไม่เพิ่มข้อความเลือด (ถ้าข้อความนี้เกี่ยวข้องกับแถบเลือดสีเขียว)
+        // healthText = new Text("HP: 100/100");
+        // healthText.setStyle("-fx-font-size: 16px; -fx-fill: white;");
+        // healthText.setTranslateX(10);
+        // healthText.setTranslateY(35);
+        // getGameScene().addUINode(healthText);
+    
+        // แสดงผล wave
         waveDisplay = new Text("Wave: 1");
         waveDisplay.setStyle("-fx-font-size: 24px; -fx-fill: yellow;");
         waveDisplay.setTranslateX(getSettings().getWidth() / 2 - 50);
         waveDisplay.setTranslateY(40);
         getGameScene().addUINode(waveDisplay);
     }
+    
+    
+    
+    
+    
 
     private void resetGameState() {
         timeSurvived = 0;
@@ -903,19 +906,16 @@ public class ZombieShooterGame extends GameApplication {
 
     // เมธอดสำหรับอัพเดทแถบเลือด
     private void updateHealthBar() {
-        if (player != null) {
+        /*if (player != null) {
             PlayerHealth healthComponent = player.getComponent(PlayerHealth.class);
             int currentHealth = healthComponent.getHealth();
-            int maxHealth = FXGL.geti("playerMaxHealth"); // ใช้ค่าสูงสุดจากตัวแปรเกม
-            
-            // คำนวณความกว้างของแถบเลือด
+            int maxHealth = FXGL.geti("playerMaxHealth");
             double healthPercentage = (double) currentHealth / maxHealth;
+            // อัพเดทความกว้างของแถบเลือดให้สัมพันธ์กับพลังชีวิต
             healthBar.setWidth(200 * healthPercentage);
-            
-            // อัพเดทข้อความแสดงเลือด
+            // อัพเดทข้อความเลือด
             healthText.setText("HP: " + currentHealth + "/" + maxHealth);
-            
-            // เปลี่ยนสีแถบเลือดตามจำนวนเลือดที่เหลือ
+            // เปลี่ยนสีแถบเลือดตามระดับพลังชีวิต
             if (healthPercentage > 0.6) {
                 healthBar.setFill(Color.GREEN);
             } else if (healthPercentage > 0.3) {
@@ -923,7 +923,7 @@ public class ZombieShooterGame extends GameApplication {
             } else {
                 healthBar.setFill(Color.RED);
             }
-        }
+        }*/
     }
 
     // เมธอดสำหรับเริ่มระบบ wave
