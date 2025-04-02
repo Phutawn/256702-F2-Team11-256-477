@@ -32,9 +32,6 @@
 18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18,18
 </data>
  </layer>
- <objectgroup id="6" name="spawn point" class="spawn point">
-  <object id="82" type="spawn point" x="644" y="165" width="21.5" height="25"/>
- </objectgroup>
  <layer id="4" name="wall" width="25" height="25">
   <data encoding="csv">
 22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,22,21,

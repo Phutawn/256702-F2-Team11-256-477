@@ -29,10 +29,10 @@ public class AnimationComponent extends Component {
         int frameW = (int) image.getWidth() / columns; // 192 / 6 = 32
         int frameH = (int) image.getHeight() / rows;  // 128 / 4 = 32
 
-        left = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 12, 17);
-        right = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 18, 23);
-        idleLeft = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 0, 5);
-        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(0.75), 6, 11);
+        left = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(1), 12, 17);
+        right = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(1), 18, 23);
+        idleLeft = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(1), 0, 5);
+        idleRight = new AnimationChannel(image, columns, frameW, frameH, Duration.seconds(1), 6, 11);
 
         texture = new AnimatedTexture(idleLeft);
         texture.loopAnimationChannel(idleLeft);
@@ -117,17 +117,5 @@ public class AnimationComponent extends Component {
 
     
 
-    // public void attack() {
-    //     texture.playAnimationChannel(animAttack);
-    // }
-
-    // public void stop() {
-    //     texture.loopAnimationChannel(animIdle);
-    // }
-
-    //  public void respawn() {
-    //     entity.removeFromWorld();
-    //     FXGL.spawn("Player", new SpawnData(x, y));
-    // }
-
+    
 }

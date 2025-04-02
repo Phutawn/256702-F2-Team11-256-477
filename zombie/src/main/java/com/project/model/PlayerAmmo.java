@@ -2,14 +2,15 @@ package com.project.model;
 
 import com.almasb.fxgl.dsl.FXGL;
 import com.almasb.fxgl.entity.component.Component;
-import javafx.scene.text.Text;
+import javafx.scene.control.Label;
+import javafx.scene.text.Font;
 
 public class PlayerAmmo extends Component {
 
     // ตัวแปรสำหรับเก็บจำนวนกระสุนปัจจุบันของผู้เล่น
     private int ammo;
     // ตัวแปรสำหรับแสดงผลจำนวนกระสุนบนหน้าจอ
-    private Text ammoDisplay;
+    private Label ammoLabel;
     // จำนวนกระสุนสูงสุดที่ผู้เล่นสามารถเก็บได้
     private static final int MAX_AMMO = 10; // จำนวนกระสุนสูงสุดที่สามารถเก็บได้
     private double fireRate = 1.0; // ค่าเริ่มต้นของ delay ระหว่างการยิง
@@ -22,17 +23,15 @@ public class PlayerAmmo extends Component {
      */
     public PlayerAmmo(int initialAmmo) {
         this.ammo = initialAmmo;
-        // สร้าง Text node สำหรับแสดงผลกระสุน
-        ammoDisplay = new Text();
-        // กำหนดรูปแบบตัวอักษรและสีของข้อความ
-        ammoDisplay.setStyle("-fx-font-size: 20px; -fx-fill: yellow;");
-        // กำหนดตำแหน่งของ Text node บนหน้าจอ
-        ammoDisplay.setTranslateX(10);
-        ammoDisplay.setTranslateY(40);
-        // อัปเดตข้อความแสดงผลให้ตรงกับจำนวนกระสุนปัจจุบัน
-        updateAmmoDisplay();
-        // เพิ่ม Text node ลงใน UI ของเกมเพื่อให้แสดงบนหน้าจอ
-        FXGL.getGameScene().addUINode(ammoDisplay);
+        setupAmmoLabel();
+    }
+
+    private void setupAmmoLabel() {
+        ammoLabel = new Label("Ammo: " + ammo);
+        ammoLabel.setStyle("-fx-text-fill: white; -fx-font-size: 20px;");
+        ammoLabel.setTranslateX(10);
+        ammoLabel.setTranslateY(40);
+        FXGL.getGameScene().addUINode(ammoLabel);
     }
 
     /**
@@ -49,11 +48,14 @@ public class PlayerAmmo extends Component {
      *
      * @param amount จำนวนกระสุนที่ต้องการใช้
      */
-    public void useAmmo(int amount) {
-        // ลดจำนวนกระสุนและตรวจสอบไม่ให้เหลือค่าติดลบ
-        ammo = Math.max(ammo - amount, 0);
-        // อัปเดตข้อความแสดงผลให้ตรงกับจำนวนกระสุนใหม่
-        updateAmmoDisplay();
+    public boolean useAmmo() {
+        if (ammo > 0) {
+            ammo--;
+            updateAmmoLabel();
+            System.out.println("Used 1 ammo. Remaining: " + ammo);
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -62,23 +64,16 @@ public class PlayerAmmo extends Component {
      * @param amount จำนวนกระสุนที่ต้องการเพิ่ม
      */
     public void addAmmo(int amount) {
-        // เพิ่มกระสุน แต่ไม่เกินจำนวนสูงสุด MAX_AMMO
-        ammo = Math.min(ammo + amount, MAX_AMMO);
-        // อัปเดตข้อความแสดงผลให้ตรงกับจำนวนกระสุนใหม่
-        updateAmmoDisplay();
+        ammo += amount;
+        updateAmmoLabel();
+        System.out.println("Added " + amount + " ammo. Current ammo: " + ammo);
     }
 
     /**
      * เมธอดสำหรับอัปเดตข้อความแสดงผลของจำนวนกระสุนบนหน้าจอ
      */
-    private void updateAmmoDisplay() {
-        // สร้างข้อความโดยใช้เครื่องหมาย "-" แทนแต่ละกระสุน
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < ammo; i++) {
-            sb.append("-");
-        }
-        // ตั้งค่าข้อความใน Text node ให้ตรงกับจำนวนกระสุน
-        ammoDisplay.setText(sb.toString());
+    private void updateAmmoLabel() {
+        ammoLabel.setText("Ammo: " + ammo);
     }
     
     /**
@@ -88,7 +83,7 @@ public class PlayerAmmo extends Component {
      */
     public void setAmmo(int ammo) {
         this.ammo = ammo;
-        updateAmmoDisplay();
+        updateAmmoLabel();
     }
 
     /**
