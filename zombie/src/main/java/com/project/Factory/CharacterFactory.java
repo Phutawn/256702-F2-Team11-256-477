@@ -4,6 +4,7 @@ import static com.almasb.fxgl.dsl.FXGL.texture;
 
 import com.project.Component.CharecterPlayer.AnimationComponent;
 import com.project.Component.CharecterPlayer.ControllerComponent;
+import com.project.Component.CharecterPlayer.GunComponent;
 import com.project.Component.CharecterZombie.ZombieAnimationComponent;
 import com.project.Type.SceneType;
 //import com.Type.Enemy.EnemyType;
@@ -48,6 +49,7 @@ public class CharacterFactory implements EntityFactory {
                 .with(new CollidableComponent(true))
                 .with(new ControllerComponent())
                 .with(new AnimationComponent("Player.png"))
+                .with(new GunComponent())
                 .with(new PlayerAmmo(10)) // เพิ่มระบบกระสุน
                 .with(new PlayerHealth()) // เพิ่มระบบเลือด
                 .with(new PlayerMedicalSupplies()) // เพิ่มระบบ medical supplies

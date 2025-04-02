@@ -13,7 +13,7 @@ public class ZombieAttackControl extends Component {
 
     private double timeSinceLastAttack = 0; // ตัวจับเวลาตั้งแต่การโจมตีครั้งล่าสุด
     private static final double ATTACK_COOLDOWN = 2.0; // เพิ่ม cooldown เป็น 2 วินาที
-    private static final double ZOMBIE_SPEED = 20; // ลดความเร็วของซอมบี้ลงจาก 40 เป็น 20 (ช้าลง 50%)
+    private static final double ZOMBIE_SPEED = 18; // ลดความเร็วของซอมบี้ลงเป็น 90% ของความเร็วผู้เล่น (20 * 0.9 = 18)
     private static final double ATTACK_DISTANCE = 20; // เพิ่มระยะห่างที่ซอมบี้จะโจมตี
     private boolean movementStopped = false; // เพิ่มตัวแปรสำหรับเช็คว่าซอมบี้หยุดเคลื่อนที่หรือไม่
     private boolean isHitAnimation = false; // เพิ่มตัวแปรสำหรับเช็คว่าซอมบี้กำลังแสดงแอนิเมชันโดนยิงหรือไม่

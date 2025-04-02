@@ -105,8 +105,13 @@ public class ZombieAnimationComponent extends Component {
     }
 
     public void hit() {
+        if (entity == null) return;
+        
         // ตั้งค่าสถานะแอนิเมชันโดนยิง
-        entity.getComponent(ZombieAttackControl.class).setHitAnimation(true);
+        ZombieAttackControl attackControl = entity.getComponent(ZombieAttackControl.class);
+        if (attackControl != null) {
+            attackControl.setHitAnimation(true);
+        }
         
         // เล่นแอนิเมชันโดนยิงตามทิศทางล่าสุด
         if (lastHorizontalDirection.equals("left")) {
@@ -118,7 +123,12 @@ public class ZombieAnimationComponent extends Component {
         
         // รอให้แอนิเมชันจบก่อนที่จะลบซอมบี้ออก
         FXGL.runOnce(() -> {
-            entity.getComponent(ZombieAttackControl.class).setHitAnimation(false);
+            if (entity != null) {
+                ZombieAttackControl control = entity.getComponent(ZombieAttackControl.class);
+                if (control != null) {
+                    control.setHitAnimation(false);
+                }
+            }
         }, Duration.seconds(1));
     }
 

@@ -41,6 +41,7 @@ import static com.almasb.fxgl.dsl.FXGL.*;
 import javafx.geometry.Point2D;
 import com.almasb.fxgl.entity.SpawnData;
 import com.project.Component.CharecterZombie.ZombieAttackControl;
+import com.project.Component.CharecterPlayer.GunComponent;
 
 public class ZombieShooterGame extends GameApplication {
 
@@ -131,14 +132,25 @@ public class ZombieShooterGame extends GameApplication {
         getGameScene().clearUINodes();
         UIManager.showNameInputScreen();
 
-        // อ่าน high score จากไฟล์ "highscore.txt" ในรูปแบบ "longestSurvivalTime,mostZombieKills"
+        // อ่าน high score จากไฟล์ "highscore.txt" ในรูปแบบ "playerName,longestSurvivalTime,mostZombieKills"
         try (BufferedReader reader = new BufferedReader(new FileReader("highscore.txt"))) {
             String line = reader.readLine();
             if (line != null) {
                 String[] parts = line.split(",");
-                if (parts.length >= 2) {
-                    longestSurvivalTime = Double.parseDouble(parts[0].trim());
-                    mostZombieKills = Integer.parseInt(parts[1].trim());
+                if (parts.length >= 3) {
+                    try {
+                        // ตรวจสอบว่าข้อมูลเป็นตัวเลขที่ถูกต้อง
+                        if (parts[1].trim().matches("\\d+(\\.\\d+)?")) {
+                            longestSurvivalTime = Double.parseDouble(parts[1].trim());
+                        }
+                        if (parts[2].trim().matches("\\d+")) {
+                            mostZombieKills = Integer.parseInt(parts[2].trim());
+                        }
+                    } catch (NumberFormatException e) {
+                        // ถ้าแปลงตัวเลขไม่สำเร็จ ให้ใช้ค่าเริ่มต้น
+                        longestSurvivalTime = 0;
+                        mostZombieKills = 0;
+                    }
                 }
             }
         } catch (IOException e) {
@@ -325,6 +337,9 @@ public class ZombieShooterGame extends GameApplication {
             timeSurvived += 1.0 / 60;
             currentSurvivalTime = timeSurvived;
             timerDisplay.setText("Time: " + (int) timeSurvived);
+            
+            // อัพเดทคะแนนสูงสุดทุกวินาที
+            updateHighScore();
         }, Duration.seconds(1.0 / 60));
     }
 
@@ -355,6 +370,11 @@ public class ZombieShooterGame extends GameApplication {
         FXGL.onKeyDown(KeyCode.SPACE, () -> {
             PlayerAmmo ammoComponent = player.getComponent(PlayerAmmo.class);
             if (ammoComponent != null && ammoComponent.useAmmo()) {
+                // เรียกใช้แอนิเมชันยิงปืน
+                GunComponent gunComponent = player.getComponent(GunComponent.class);
+                if (gunComponent != null) {
+                    gunComponent.shoot();
+                }
                 shootBullet();
             }
         });
@@ -935,6 +955,46 @@ public class ZombieShooterGame extends GameApplication {
                 FXGL.runOnce(() -> startNewWave(), Duration.seconds(5));
             }
         }, Duration.seconds(1));
+    }
+
+    // เมธอดสำหรับกลับไปยังเกมหลังจากดูคะแนนสูงสุด
+    public void resumeGame() {
+        // ล้าง UI nodes ทั้งหมด
+        getGameScene().clearUINodes();
+        
+        // อัพเดท UI ของเกม
+        UIManager.updateGameUI();
+        
+        // อัพเดทการแสดงผลคะแนนสูงสุด
+        updateHighScoreDisplay();
+    }
+
+    // เมธอดสำหรับอัพเดทคะแนนสูงสุด
+    private void updateHighScore() {
+        // อัพเดทคะแนนสูงสุดถ้าเวลารอดชีวิตนานกว่าเดิม
+        if (timeSurvived > longestSurvivalTime) {
+            longestSurvivalTime = timeSurvived;
+        }
+        
+        // อัพเดทคะแนนสูงสุดถ้าฆ่าซอมบี้ได้มากกว่าเดิม
+        if (zombieKillCount > mostZombieKills) {
+            mostZombieKills = zombieKillCount;
+        }
+        
+        // บันทึกคะแนนสูงสุดลงไฟล์พร้อมชื่อผู้เล่น
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter("highscore.txt", true))) {
+            writer.write(String.format("%s,%.1f,%d\n", playerName, timeSurvived, zombieKillCount));
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    // เมธอดสำหรับอัพเดทการแสดงผลคะแนนสูงสุด
+    private void updateHighScoreDisplay() {
+        if (highScoreDisplay != null) {
+            highScoreDisplay.setText("Longest Survival: " + (int) longestSurvivalTime 
+                + " sec\nMost Kills: " + mostZombieKills);
+        }
     }
 
     // เมธอด main สำหรับรันโปรแกรมเกม
